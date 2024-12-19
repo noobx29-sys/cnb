@@ -1,39 +1,50 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { AnimatedSplashScreen } from '@/components/AnimatedSplashScreen';
+import { AuthProvider } from '@/context/AuthContext';
+import { ColorSchemeProvider } from '@/context/ColorSchemeContext';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+  const onAnimationComplete = useCallback((finished: boolean) => {
+    if (finished) {
+      setSplashAnimationFinished(true);
     }
-  }, [loaded]);
+  }, []);
 
   if (!loaded) {
     return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AnimatedSplashScreen onAnimationComplete={onAnimationComplete}>
+      <ColorSchemeProvider>
+        <ThemeProvider value={DarkTheme}>
+          <AuthProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen 
+                name="(auth)" 
+                options={{
+                  animation: splashAnimationFinished ? 'fade' : 'none',
+                }}
+              />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+            </Stack>
+            <StatusBar style="light" />
+          </AuthProvider>
+        </ThemeProvider>
+      </ColorSchemeProvider>
+    </AnimatedSplashScreen>
   );
 }

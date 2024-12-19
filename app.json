@@ -1,41 +1,67 @@
 {
   "expo": {
-    "name": "cnb",
+    "name": "CNB Carpets",
     "slug": "cnb",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "icon": "./assets/images/cnb-app.png",
+    "scheme": "cnb",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/cnb-app.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FB8A13"
+    },
     "ios": {
+      "bundleIdentifier": "com.cnb.app",
+      "versionCode": 1,
       "supportsTablet": true
     },
     "android": {
+      "package": "com.cnb.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+        "foregroundImage": "./assets/images/cnb-app.png",
+        "backgroundColor": "#FB8A13"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/cnb-app.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/cnb-app.png",
+          "imageWidth": 100,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#FB8A13"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "151b57ce-bc3b-4490-8b1a-076e7828c2f2"
+      }
     }
   }
 }
