@@ -58,22 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 await AsyncStorage.setItem('user_id', user.uid);
                 await AsyncStorage.setItem('user_email', user.email || '');
                 
+                // Explicitly navigate to tabs
                 router.replace('/(tabs)');
               } else {
                 throw new Error('Failed to get user data or role');
               }
             } else {
-              // Check if we have stored user data
-              if (storedUserId) {
-                const storedUserData = await getUserDocument(storedUserId);
-                if (storedUserData) {
-                  // Attempt to restore session
-                  setUser(auth.currentUser);
-                  setUserData(storedUserData);
-                  return;
-                }
-              }
-              
+              // Clear everything and redirect to sign-in
               setUser(null);
               setUserData(null);
               await AsyncStorage.removeItem('user_id');

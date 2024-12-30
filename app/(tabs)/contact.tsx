@@ -1,6 +1,7 @@
 import { StyleSheet, Image, Platform, SafeAreaView, Linking, TouchableOpacity, ScrollView, RefreshControl, StatusBar, useColorScheme } from 'react-native';
-import { useState } from 'react';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { useState, useCallback } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Collapsible } from '@/components/Collapsible';
 import { ExternalLink } from '@/components/ExternalLink';
@@ -12,6 +13,7 @@ import { SvgXml } from 'react-native-svg';
 import { Colors } from '@/constants/Colors';
 export default function ContactScreen() {
   const [refreshing, setRefreshing] = useState(false);
+  const [mapError, setMapError] = useState(false);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
 
@@ -105,6 +107,11 @@ export default function ContactScreen() {
     Linking.openURL(`tel:${phoneNumber.replace(/\s/g, '')}`);
   };
 
+  const handleMapError = useCallback((error: any) => {
+    console.error('Map error:', error);
+    setMapError(true);
+  }, []);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -138,28 +145,37 @@ export default function ContactScreen() {
               <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
                 Petaling Jaya Office
               </ThemedText>
-              <MapView
-                style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10  }}
-                initialRegion={{
-                  latitude: 3.111126,
-                  longitude: 101.611626,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-              >
-                <Marker
-                  coordinate={{
+              {!mapError ? (
+                <MapView
+                  style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
+                  initialRegion={{
                     latitude: 3.111126,
                     longitude: 101.611626,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
                   }}
-                  title="CNB Carpets PJ Office"
-                  description="No.18, Jalan SS2/3, 47300 Petaling Jaya"
-                />
-              </MapView>
-              {/* <ThemedText style={styles.sectionContent}>
-                No.18, Jalan SS2/3, 47300 Petaling Jaya,{'\n'}
-                Selangor, Malaysia
-              </ThemedText> */}
+                  onLayout={(e) => {
+                    try {
+                      // Map loaded successfully
+                    } catch (error) {
+                      handleMapError(error);
+                    }
+                  }}
+                >
+                  <Marker
+                    coordinate={{
+                      latitude: 3.111126,
+                      longitude: 101.611626,
+                    }}
+                    title="CNB Carpets PJ Office"
+                    description="No.18, Jalan SS2/3, 47300 Petaling Jaya"
+                  />
+                </MapView>
+              ) : (
+                <ThemedText style={styles.sectionContent}>
+                  Map temporarily unavailable
+                </ThemedText>
+              )}
               <TouchableOpacity onPress={() => handlePhoneCall('60376663333')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>
                   <Ionicons name="call" size={30} color="#FB8A13" />
@@ -187,7 +203,7 @@ export default function ContactScreen() {
                 <TouchableOpacity onPress={() => Linking.openURL('https://ul.waze.com/ul?ll=3.11112600%2C101.61162600&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location')}>
                   <ThemedView style={styles.linkContainer}>
                     <FontAwesome5 name="waze" size={30} color="#33ccff" />
-                    <ThemedText style={{fontSize: 16, color: '#33ccff'}} type="link">Waze</ThemedText>
+                    <ThemedText type="link" style={{fontSize: 16, color: '#33ccff'}}>Waze</ThemedText>
                   </ThemedView>
                 </TouchableOpacity>
                 
@@ -205,28 +221,37 @@ export default function ContactScreen() {
               <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
                 Puchong Office
               </ThemedText>
-              <MapView
-                style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
-                initialRegion={{
-                  latitude: 3.06937,
-                  longitude: 101.662009,
-                  latitudeDelta: 0.01,
-                  longitudeDelta: 0.01,
-                }}
-              >
-                <Marker
-                  coordinate={{
+              {!mapError ? (
+                <MapView
+                  style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
+                  initialRegion={{
                     latitude: 3.06937,
                     longitude: 101.662009,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
                   }}
-                  title="CNB Carpets Puchong Office"
-                  description="No.59, Jalan 10/152, Taman Industrial O.U.G."
-                />
-              </MapView>
-              {/* <ThemedText style={styles.sectionContent}>
-                No.59, Jalan 10/152, Taman Industrial O.U.G.,{'\n'}
-                Off Batu 6 1/2, Jalan Puchong, 58200 Kuala Lumpur
-              </ThemedText> */}
+                  onLayout={(e) => {
+                    try {
+                      // Map loaded successfully
+                    } catch (error) {
+                      handleMapError(error);
+                    }
+                  }}
+                >
+                  <Marker
+                    coordinate={{
+                      latitude: 3.06937,
+                      longitude: 101.662009,
+                    }}
+                    title="CNB Carpets Puchong Office"
+                    description="No.59, Jalan 10/152, Taman Industrial O.U.G."
+                  />
+                </MapView>
+              ) : (
+                <ThemedText style={styles.sectionContent}>
+                  Map temporarily unavailable
+                </ThemedText>
+              )}
               <TouchableOpacity onPress={() => handlePhoneCall('60377833377')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>
                   <Ionicons name="call" size={30} color="#FB8A13" />

@@ -113,7 +113,7 @@ export default function ProfileScreen() {
               style={styles.themeToggle}
               onPress={toggleColorScheme}
             >
-              <ThemedText>{colorScheme === 'dark' ? '🌙' : '☀️'}</ThemedText>
+              <ThemedText>{colorScheme === 'dark' ? '🌙' || 'light' : '☀️'}</ThemedText>
             </Pressable>
           </ThemedView>
 

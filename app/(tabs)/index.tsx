@@ -228,6 +228,8 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView 
           style={styles.scrollContainer}
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

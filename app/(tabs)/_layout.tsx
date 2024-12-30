@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Platform, StyleSheet } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/HapticTab';
@@ -40,23 +40,35 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme].tint,
           headerShown: false,
-          tabBarButton: HapticTab,
+          tabBarButton: Platform.select({
+            ios: HapticTab,
+            android: undefined,
+          }),
           tabBarBackground: TabBarBackground,
-          tabBarStyle: Platform.select({
+          tabBarStyle: {
+            ...Platform.select({
+              ios: {
+                position: 'absolute',
+                height: 88,
+              },
+              android: {
+                height: 60,
+                elevation: 8,
+                backgroundColor: Colors[colorScheme].background,
+              },
+            }),
+            borderTopWidth: StyleSheet.hairlineWidth,
+            borderTopColor: Colors[colorScheme].border,
+          },
+          tabBarItemStyle: Platform.select({
             ios: {
-              position: 'absolute',
-              height: 88,
+              height: '100%',
+              paddingBottom: 20,
             },
-            default: {
-              height: 60,
+            android: {
+              height: '100%',
             },
           }),
-          tabBarItemStyle: {
-            height: '100%',
-            alignItems: 'center',
-            justifyContent: 'center',
-            paddingBottom: Platform.select({ ios: 20, android: 0 }),
-          },
           tabBarLabelStyle: {
             fontSize: 12,
             textAlign: 'center',

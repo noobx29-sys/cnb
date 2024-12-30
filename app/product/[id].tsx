@@ -13,7 +13,7 @@ import {
   TouchableOpacity,
   Share,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons'; // Make sure you have this package installed
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
@@ -208,7 +208,6 @@ export default function ProductViewScreen() {
   if (!product) {
     return (
       <SafeAreaView style={styles.container}>
-        <ThemedText>Loading...</ThemedText>
       </SafeAreaView>
     );
   }
