@@ -54,6 +54,8 @@ export default function AdminProductScreen() {
     section: {
       padding: 16,
       gap: 8,
+      maxWidth: Platform.OS === 'web' ? 1200 : '100%',
+      marginHorizontal: Platform.OS === 'web' ? 'auto' : 0,
     },
     productItem: {
       flexDirection: 'row',

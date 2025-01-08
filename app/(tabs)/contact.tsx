@@ -1,5 +1,5 @@
-import { StyleSheet, Image, Platform, SafeAreaView, Linking, TouchableOpacity, ScrollView, RefreshControl, StatusBar, useColorScheme } from 'react-native';
-import { useState, useCallback } from 'react';
+import { StyleSheet, Image, Platform, SafeAreaView, Linking, TouchableOpacity, ScrollView, RefreshControl, StatusBar, useColorScheme, PermissionsAndroid } from 'react-native';
+import { useState, useCallback, useEffect } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,12 +8,25 @@ import { ExternalLink } from '@/components/ExternalLink';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import MapView, { Marker } from 'react-native-maps';
+import Map, { Marker } from '@/components/Map';
 import { SvgXml } from 'react-native-svg';
 import { Colors } from '@/constants/Colors';
+
+const WebMap = ({ latitude, longitude, height }: { latitude: number; longitude: number; height: number }) => (
+  <iframe
+    src={`https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d500!2d${longitude}!3d${latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM8KwMDYnNDUuMCJOIDEwMcKwMzknNDEuOSJF!5e0!3m2!1sen!2s!4v1600000000000!5m2!1sen!2s`}
+    width="100%"
+    height={height}
+    style={{ border: 0, borderRadius: 10, marginTop: 10, marginBottom: 10 }}
+    allowFullScreen
+    loading="lazy"
+  />
+);
+
 export default function ContactScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [mapError, setMapError] = useState(false);
+  const [hasLocationPermission, setHasLocationPermission] = useState(false);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
 
@@ -112,6 +125,37 @@ export default function ContactScreen() {
     setMapError(true);
   }, []);
 
+  const requestLocationPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: "Location Permission",
+            message: "CNB Carpets needs access to your location to show office locations on the map",
+            buttonNeutral: "Ask Me Later",
+            buttonNegative: "Cancel",
+            buttonPositive: "OK"
+          }
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
+  };
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const hasPermission = await requestLocationPermission();
+      setHasLocationPermission(hasPermission);
+    };
+    
+    checkPermissions();
+  }, []);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -145,36 +189,48 @@ export default function ContactScreen() {
               <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
                 Petaling Jaya Office
               </ThemedText>
-              {!mapError ? (
-                <MapView
-                  style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
-                  initialRegion={{
-                    latitude: 3.111126,
-                    longitude: 101.611626,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  onLayout={(e) => {
-                    try {
-                      // Map loaded successfully
-                    } catch (error) {
-                      handleMapError(error);
-                    }
-                  }}
-                >
-                  <Marker
-                    coordinate={{
+              {!hasLocationPermission || mapError ? (
+                <ThemedView style={{ padding: 16, alignItems: 'center' }}>
+                  <ThemedText>
+                    {!hasLocationPermission 
+                      ? "Location permission is required to show the map. Please enable it in your device settings."
+                      : "Unable to load the map. Please try again later."}
+                  </ThemedText>
+                </ThemedView>
+              ) : (
+                Platform.OS === 'web' ? (
+                  <WebMap
+                    latitude={3.111126}
+                    longitude={101.611626}
+                    height={400}
+                  />
+                ) : (
+                  <Map
+                    style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
+                    initialRegion={{
                       latitude: 3.111126,
                       longitude: 101.611626,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
                     }}
-                    title="CNB Carpets PJ Office"
-                    description="No.18, Jalan SS2/3, 47300 Petaling Jaya"
-                  />
-                </MapView>
-              ) : (
-                <ThemedText style={styles.sectionContent}>
-                  Map temporarily unavailable
-                </ThemedText>
+                    onLayout={(e) => {
+                      try {
+                        // Map loaded successfully
+                      } catch (error) {
+                        handleMapError(error);
+                      }
+                    }}
+                  >
+                    <Marker
+                      coordinate={{
+                        latitude: 3.111126,
+                        longitude: 101.611626,
+                      }}
+                      title="CNB Carpets PJ Office"
+                      description="No.18, Jalan SS2/3, 47300 Petaling Jaya"
+                    />
+                  </Map>
+                )
               )}
               <TouchableOpacity onPress={() => handlePhoneCall('60376663333')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>
@@ -221,36 +277,48 @@ export default function ContactScreen() {
               <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
                 Puchong Office
               </ThemedText>
-              {!mapError ? (
-                <MapView
-                  style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
-                  initialRegion={{
-                    latitude: 3.06937,
-                    longitude: 101.662009,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  onLayout={(e) => {
-                    try {
-                      // Map loaded successfully
-                    } catch (error) {
-                      handleMapError(error);
-                    }
-                  }}
-                >
-                  <Marker
-                    coordinate={{
+              {!hasLocationPermission || mapError ? (
+                <ThemedView style={{ padding: 16, alignItems: 'center' }}>
+                  <ThemedText>
+                    {!hasLocationPermission 
+                      ? "Location permission is required to show the map. Please enable it in your device settings."
+                      : "Unable to load the map. Please try again later."}
+                  </ThemedText>
+                </ThemedView>
+              ) : (
+                Platform.OS === 'web' ? (
+                  <WebMap
+                    latitude={3.06937}
+                    longitude={101.662009}
+                    height={400}
+                  />
+                ) : (
+                  <Map
+                    style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
+                    initialRegion={{
                       latitude: 3.06937,
                       longitude: 101.662009,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
                     }}
-                    title="CNB Carpets Puchong Office"
-                    description="No.59, Jalan 10/152, Taman Industrial O.U.G."
-                  />
-                </MapView>
-              ) : (
-                <ThemedText style={styles.sectionContent}>
-                  Map temporarily unavailable
-                </ThemedText>
+                    onLayout={(e) => {
+                      try {
+                        // Map loaded successfully
+                      } catch (error) {
+                        handleMapError(error);
+                      }
+                    }}
+                  >
+                    <Marker
+                      coordinate={{
+                        latitude: 3.06937,
+                        longitude: 101.662009,
+                      }}
+                      title="CNB Carpets Puchong Office"
+                      description="No.59, Jalan 10/152, Taman Industrial O.U.G."
+                    />
+                  </Map>
+                )
               )}
               <TouchableOpacity onPress={() => handlePhoneCall('60377833377')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>

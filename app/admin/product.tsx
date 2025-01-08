@@ -12,6 +12,17 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+interface Category {
+  name: string;
+  subCategories?: Subcategory[];
+}
+
+interface Subcategory {
+  name: string;
+  id: string;
+  subCategories?: Subcategory[];
+}
+
 export default function AdminProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [newProduct, setNewProduct] = useState({
@@ -21,11 +32,15 @@ export default function AdminProductsScreen() {
     price: '',
     stock: '',
     images: [] as ImagePicker.ImagePickerAsset[],
+    subcategory: '',
+    subsubcategory: '',
   });
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Array<{name: string, subCategories?: Subcategory[]}>>([]);
   const { userData } = useAuth();
   const { canManageProducts } = usePermissions();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [subcategoryDropdownOpen, setSubcategoryDropdownOpen] = useState(false);
+  const [subsubcategoryDropdownOpen, setSubsubcategoryDropdownOpen] = useState(false);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
 
@@ -210,6 +225,13 @@ export default function AdminProductsScreen() {
       fontSize: 24,
       fontWeight: '600',
     },
+    nestedDropdown: {
+      gap: 8,
+    },
+    nestedItem: {
+      fontSize: 12,
+      color: colorScheme === 'dark' ? Colors.light.text : Colors.dark.text,
+    },
   });
 
   useEffect(() => {
@@ -252,7 +274,7 @@ export default function AdminProductsScreen() {
       try {
         const fetchedCategories = await getAllCategories();
         console.log('Fetched categories:', fetchedCategories);
-        setCategories(fetchedCategories.map(category => category.name));
+        setCategories(fetchedCategories);
       } catch (error) {
         console.error('Error loading categories:', error);
         Alert.alert('Error', 'Failed to load categories');
@@ -299,16 +321,19 @@ export default function AdminProductsScreen() {
         name: newProduct.name,
         description: newProduct.description,
         category: newProduct.category,
+        subcategory: newProduct.subcategory || null,
+        subsubcategory: newProduct.subsubcategory || null,
         price: parseFloat(newProduct.price),
         stock: parseInt(newProduct.stock),
         images: imageUrls,
-        createdBy: userData.uid,
       });
 
       setNewProduct({
         name: '',
         description: '',
         category: '',
+        subcategory: '',
+        subsubcategory: '',
         price: '',
         stock: '',
         images: [],
@@ -405,21 +430,106 @@ export default function AdminProductsScreen() {
                     <ThemedView style={styles.dropdownMenu}>
                     {categories.map((category) => (
                         <Pressable
-                        key={category}
+                        key={category.name}
                         style={styles.dropdownMenuItem}
                         onPress={() => {
-                            setNewProduct({ ...newProduct, category });
+                            console.log('Selected category:', category);
+                            setNewProduct({ ...newProduct, category: category.name, subcategory: '' });
                             setDropdownOpen(false);
                         }}
                         >
                         <ThemedText style={styles.dropdownMenuItemText}>
-                            {category}
+                            {category.name}
                         </ThemedText>
                         </Pressable>
                     ))}
                     </ThemedView>
                 )}
                 </ThemedView>
+
+                {newProduct.category && (categories.find(c => c.name === newProduct.category)?.subCategories ?? []).length > 0 && (
+                    <ThemedView style={styles.dropdownContainer}>
+                        <ThemedText style={styles.dropdownLabel}>Subcategory</ThemedText>
+                        <Pressable
+                            style={styles.dropdown}
+                            onPress={() => setSubcategoryDropdownOpen(!subcategoryDropdownOpen)}
+                        >
+                            <ThemedText style={styles.dropdownText}>
+                                {newProduct.subcategory || 'Select a subcategory'}
+                            </ThemedText>
+                        </Pressable>
+                        {subcategoryDropdownOpen && (
+                            <ThemedView style={styles.dropdownMenu}>
+                                {categories
+                                    .find(c => c.name === newProduct.category)
+                                    ?.subCategories
+                                    ?.map((subcategory: Subcategory) => (
+                                        <Pressable
+                                            key={subcategory.id}
+                                            style={styles.dropdownMenuItem}
+                                            onPress={() => {
+                                                setNewProduct({
+                                                    ...newProduct,
+                                                    subcategory: subcategory.name,
+                                                    subsubcategory: ''
+                                                });
+                                                setSubcategoryDropdownOpen(false);
+                                            }}
+                                        >
+                                            <ThemedText style={styles.dropdownMenuItemText}>
+                                                {subcategory.name}
+                                            </ThemedText>
+                                        </Pressable>
+                                    ))}
+                            </ThemedView>
+                        )}
+                    </ThemedView>
+                )}
+
+                {newProduct.subcategory && (categories
+                  .find(c => c.name === newProduct.category)
+                  ?.subCategories
+                  ?.find(s => s.name === newProduct.subcategory)
+                  ?.subCategories ?? []).length > 0 && (
+                  <ThemedView style={styles.dropdownContainer}>
+                    <ThemedText style={styles.dropdownLabel}>Sub-subcategory</ThemedText>
+                    <Pressable
+                      style={styles.dropdown}
+                      onPress={() => setSubsubcategoryDropdownOpen(!subsubcategoryDropdownOpen)}
+                    >
+                      <ThemedText style={styles.dropdownText}>
+                        {newProduct.subsubcategory || 'Select a sub-subcategory'}
+                      </ThemedText>
+                    </Pressable>
+                    {subsubcategoryDropdownOpen && (
+                      <ThemedView style={styles.dropdownMenu}>
+                        {categories
+                          .find(c => c.name === newProduct.category)
+                          ?.subCategories
+                          ?.find(s => s.name === newProduct.subcategory)
+                          ?.subCategories
+                          ?.map((subsubcategory) => (
+                            <Pressable
+                              key={subsubcategory.id}
+                              style={styles.dropdownMenuItem}
+                              onPress={() => {
+                                setNewProduct({
+                                  ...newProduct,
+                                  subsubcategory: subsubcategory.name
+                                });
+                                setSubsubcategoryDropdownOpen(false);
+                              }}
+                            >
+                              <ThemedText style={styles.dropdownMenuItemText}>
+                                {subsubcategory.name}
+                              </ThemedText>
+                            </Pressable>
+                          ))}
+                      </ThemedView>
+                    )}
+                  </ThemedView>
+                )}
+
                 <ThemedText style={styles.inputLabel}>Price</ThemedText>
                 <TextInput
                 style={styles.input}

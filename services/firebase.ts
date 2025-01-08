@@ -1,6 +1,6 @@
 import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getFirestore, collection, doc, setDoc, getDoc, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebaseConfig';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -47,19 +47,32 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  category: string;
   price: number;
   stock: number;
-  images?: string[];
+  category: string | null;
+  subcategory: string | null;
+  subsubcategory: string | null;
+  images: string[];
   createdAt: Date;
   updatedAt: Date;
-  createdBy: string;
 }
 
 // Category types
 export interface Category {
   id: string;
   name: string;
+  subCategories: Array<{
+    id: string;
+    name: string;
+    subCategories?: Array<{
+      id: string;
+      name: string;
+      subCategories?: Array<{
+        id: string;
+        name: string;
+      }>;
+    }>;
+  }>;
   createdAt: Date;
 }
 
@@ -192,36 +205,187 @@ export async function getAllProducts() {
 }
 
 // Category functions
-export const createCategory = async (name: string) => {
+export const createCategory = async (name: string, parentCategoryId?: string, parentSubcategoryId?: string) => {
   try {
-    const docRef = await addDoc(collection(db, 'categories'), {
-      name,
-      createdAt: new Date(),
+    if (!parentCategoryId) {
+      // Creating main category
+      const newCategory = {
+        name,
+        subCategories: [],
+        createdAt: new Date(),
+      };
+      const docRef = await addDoc(collection(db, 'categories'), newCategory);
+      return docRef.id;
+    }
+
+    const categoryRef = doc(db, 'categories', parentCategoryId);
+    const categorySnap = await getDoc(categoryRef);
+    const category = categorySnap.data() as Category;
+
+    if (!parentSubcategoryId) {
+      // Adding first level subcategory
+      const newSubCategory = {
+        id: Date.now().toString(),
+        name,
+        subCategories: []
+      };
+      await updateDoc(categoryRef, {
+        subCategories: arrayUnion(newSubCategory)
+      });
+      return newSubCategory.id;
+    }
+
+    // Find the parent subcategory
+    const updatedSubCategories = category.subCategories.map(subCat => {
+      if (subCat.id === parentSubcategoryId) {
+        return {
+          ...subCat,
+          subCategories: [
+            ...(subCat.subCategories || []),
+            {
+              id: Date.now().toString(),
+              name,
+              subCategories: []
+            }
+          ]
+        };
+      }
+      return subCat;
     });
-    return docRef.id;
+
+    await updateDoc(categoryRef, {
+      subCategories: updatedSubCategories
+    });
   } catch (error) {
     console.error('Error creating category:', error);
     throw error;
   }
 };
 
+export const updateCategory = async (categoryId: string, data: Partial<Category>) => {
+  try {
+    const categoryRef = doc(db, 'categories', categoryId);
+    await updateDoc(categoryRef, data);
+  } catch (error) {
+    console.error('Error updating category:', error);
+    throw error;
+  }
+};
+
 export const deleteCategory = async (categoryId: string) => {
   try {
-    await deleteDoc(doc(db, 'categories', categoryId));
+    const productsSnapshot = await getDocs(
+      query(collection(db, 'products'), where('category', '==', categoryId))
+    );
+    
+    const batch = writeBatch(db);
+    productsSnapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, { 
+        category: null,
+        subcategory: null 
+      });
+    });
+    
+    batch.delete(doc(db, 'categories', categoryId));
+    await batch.commit();
   } catch (error) {
     console.error('Error deleting category:', error);
     throw error;
   }
 };
 
-export const getAllCategories = async (): Promise<Category[]> => {
+export const deleteSubcategory = async (
+  categoryId: string, 
+  subcategoryId: string, 
+  parentSubcategoryId?: string,
+  grandparentSubcategoryId?: string
+) => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'categories'));
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate(),
-    })) as Category[];
+    const categoryRef = doc(db, 'categories', categoryId);
+    const categorySnap = await getDoc(categoryRef);
+    const category = categorySnap.data() as Category;
+
+    let updatedSubCategories;
+
+    if (!parentSubcategoryId) {
+      // Delete first level subcategory
+      updatedSubCategories = category.subCategories.filter(
+        sub => sub.id !== subcategoryId
+      );
+    } else if (!grandparentSubcategoryId) {
+      // Delete second level subcategory
+      updatedSubCategories = category.subCategories.map(subCat => {
+        if (subCat.id === parentSubcategoryId) {
+          return {
+            ...subCat,
+            subCategories: (subCat.subCategories || []).filter(
+              sub => sub.id !== subcategoryId
+            )
+          };
+        }
+        return subCat;
+      });
+    } else {
+      // Delete third level subcategory
+      updatedSubCategories = category.subCategories.map(subCat => {
+        if (subCat.id === grandparentSubcategoryId) {
+          return {
+            ...subCat,
+            subCategories: (subCat.subCategories || []).map(secondLevelSub => {
+              if (secondLevelSub.id === parentSubcategoryId) {
+                return {
+                  ...secondLevelSub,
+                  subCategories: (secondLevelSub.subCategories || []).filter(
+                    thirdLevelSub => thirdLevelSub.id !== subcategoryId
+                  )
+                };
+              }
+              return secondLevelSub;
+            })
+          };
+        }
+        return subCat;
+      });
+    }
+
+    // Update products that use this subcategory
+    const productsSnapshot = await getDocs(
+      query(collection(db, 'products'), where('subsubcategory', '==', subcategoryId))
+    );
+
+    const batch = writeBatch(db);
+    productsSnapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, { 
+        subsubcategory: null 
+      });
+    });
+
+    // Update the category
+    batch.update(categoryRef, { subCategories: updatedSubCategories });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error deleting subcategory:', error);
+    throw error;
+  }
+};
+
+export const getAllCategories = async () => {
+  try {
+    const categoriesRef = collection(db, 'categories');
+    const querySnapshot = await getDocs(categoriesRef);
+    const categories = querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      console.log('Raw category data:', data);
+      return {
+        id: doc.id,
+        name: data.name,
+        subCategories: data.subCategories || [],
+        createdAt: data.createdAt?.toDate() || new Date(),
+      };
+    });
+    console.log('Processed categories:', categories);
+    return categories;
   } catch (error) {
     console.error('Error getting categories:', error);
     throw error;

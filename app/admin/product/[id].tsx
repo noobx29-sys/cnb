@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Pressable, TextInput, Alert, ScrollView, SafeAreaView, Image, useColorScheme, Platform, StatusBar } from 'react-native';
+import { StyleSheet, Pressable, TextInput, Alert, ScrollView, SafeAreaView, Image, useColorScheme, Platform, StatusBar, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,13 +11,26 @@ import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 
+interface Category {
+  name: string;
+  subCategories?: Subcategory[];
+}
+
+interface Subcategory {
+  name: string;
+  id: string;
+  subCategories?: Subcategory[];
+}
+
 export default function EditProductScreen() {
   const { id } = useLocalSearchParams();
   const [product, setProduct] = useState<Product | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { userData } = useAuth();
   const { canManageProducts } = usePermissions();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [subcategoryDropdownOpen, setSubcategoryDropdownOpen] = useState(false);
+  const [subsubcategoryDropdownOpen, setSubsubcategoryDropdownOpen] = useState(false);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
 
@@ -154,9 +167,11 @@ export default function EditProductScreen() {
     },
     dropdownMenuItem: {
       padding: 8,
+      paddingVertical: 12,
     },
     dropdownMenuItemText: {
       color: colorScheme === 'dark' ? Colors.light.text : Colors.dark.text,
+      fontSize: 16,
     },
     buttonContainer: {
       gap: 16,
@@ -199,6 +214,15 @@ export default function EditProductScreen() {
       fontSize: 24,
       fontWeight: '600',
     },
+    nestedDropdown: {
+      marginLeft: 20,
+      borderLeftWidth: 1,
+      borderLeftColor: Colors.light.tint,
+    },
+    nestedItem: {
+      fontSize: 14,
+      color: Colors.light.textMuted,
+    },
   });
 
   useEffect(() => {
@@ -235,7 +259,7 @@ export default function EditProductScreen() {
   const loadCategories = async () => {
     try {
       const fetchedCategories = await getAllCategories();
-      setCategories(fetchedCategories.map(category => category.name));
+      setCategories(fetchedCategories as unknown as Category[]);
     } catch (error) {
       console.error('Error loading categories:', error);
       Alert.alert('Error', 'Failed to load categories');
@@ -287,6 +311,8 @@ export default function EditProductScreen() {
         name: product.name,
         description: product.description,
         category: product.category,
+        subcategory: product.subcategory || null,
+        subsubcategory: product.subsubcategory || null,
         price: product.price,
         stock: product.stock,
         images: product.images,
@@ -377,21 +403,103 @@ export default function EditProductScreen() {
               <ThemedView style={styles.dropdownMenu}>
                 {categories.map((category) => (
                   <Pressable
-                    key={category}
+                    key={category.name}
                     style={styles.dropdownMenuItem}
                     onPress={() => {
-                      setProduct({ ...product, category });
+                      setProduct({ ...product, category: category.name, subcategory: '' });
                       setDropdownOpen(false);
                     }}
                   >
                     <ThemedText style={styles.dropdownMenuItemText}>
-                      {category}
+                      {category.name}
                     </ThemedText>
                   </Pressable>
                 ))}
               </ThemedView>
             )}
           </ThemedView>
+
+          {product.category && (categories.find(c => c.name === product.category)?.subCategories ?? []).length > 0 && (
+            <ThemedView style={styles.dropdownContainer}>
+              <ThemedText style={styles.dropdownLabel}>Subcategory</ThemedText>
+              <Pressable
+                style={styles.dropdown}
+                onPress={() => setSubcategoryDropdownOpen(!subcategoryDropdownOpen)}
+              >
+                <ThemedText style={styles.dropdownText}>
+                  {product.subcategory || 'Select a subcategory'}
+                </ThemedText>
+              </Pressable>
+              {subcategoryDropdownOpen && (
+                <ThemedView style={styles.dropdownMenu}>
+                  {categories
+                    .find(c => c.name === product.category)
+                    ?.subCategories
+                    ?.map((subcategory: Subcategory) => (
+                      <Pressable
+                        key={subcategory.id}
+                        style={styles.dropdownMenuItem}
+                        onPress={() => {
+                          setProduct({
+                            ...product,
+                            subcategory: subcategory.name,
+                            subsubcategory: null
+                          });
+                          setSubcategoryDropdownOpen(false);
+                        }}
+                      >
+                        <ThemedText style={styles.dropdownMenuItemText}>
+                          {subcategory.name}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                </ThemedView>
+              )}
+            </ThemedView>
+          )}
+          {product.subcategory && (categories
+            .find(c => c.name === product.category)
+            ?.subCategories
+            ?.find(s => s.name === product.subcategory)
+            ?.subCategories ?? []).length > 0 && (
+            <ThemedView style={styles.dropdownContainer}>
+              <ThemedText style={styles.dropdownLabel}>Sub-subcategory</ThemedText>
+              <Pressable
+                style={styles.dropdown}
+                onPress={() => setSubsubcategoryDropdownOpen(!subsubcategoryDropdownOpen)}
+              >
+                <ThemedText style={styles.dropdownText}>
+                  {product.subsubcategory || 'Select a sub-subcategory'}
+                </ThemedText>
+              </Pressable>
+              {subsubcategoryDropdownOpen && (
+                <ThemedView style={styles.dropdownMenu}>
+                  {categories
+                    .find(c => c.name === product.category)
+                    ?.subCategories
+                    ?.find(s => s.name === product.subcategory)
+                    ?.subCategories
+                    ?.map((subsubcategory) => (
+                      <Pressable
+                        key={subsubcategory.id}
+                        style={styles.dropdownMenuItem}
+                        onPress={() => {
+                          setProduct({
+                            ...product,
+                            subsubcategory: subsubcategory.name
+                          });
+                          setSubsubcategoryDropdownOpen(false);
+                        }}
+                      >
+                        <ThemedText style={styles.dropdownMenuItemText}>
+                          {subsubcategory.name}
+                        </ThemedText>
+                      </Pressable>
+                    ))}
+                </ThemedView>
+              )}
+            </ThemedView>
+          )}
           <ThemedText style={styles.inputLabel}>Price</ThemedText>
           <TextInput
             style={styles.input}

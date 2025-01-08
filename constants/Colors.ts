@@ -17,6 +17,7 @@ export const Colors = {
     secondaryBackground: '#F5F5F5',
     border: '#E5E5E5',
     textMuted: '#666666',
+    error: '#FF3B30',
   },
   dark: {
     text: '#ECEDEE',
@@ -28,5 +29,6 @@ export const Colors = {
     secondaryBackground: '#2A2A2A',
     border: '#2A2A2A',
     textMuted: '#999999',
+    error: '#FF453A',
   },
 };

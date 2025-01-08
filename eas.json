@@ -1,6 +1,6 @@
 {
   "cli": {
-    "version": ">= 13.4.2",
+    "version": ">= 3.13.3",
     "appVersionSource": "remote"
   },
   "build": {
@@ -8,13 +8,23 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "androidGradlePluginVersion": "7.4.2"
+      },
+      "env": {
+        "ANDROID_NDK_HOME": "/usr/local/share/android-ndk",
+        "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk"
       }
     },
     "production": {

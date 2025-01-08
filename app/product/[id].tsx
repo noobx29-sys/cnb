@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   Image, 
@@ -12,13 +12,17 @@ import {
   Modal,
   TouchableOpacity,
   Share,
+  Pressable,
+  Alert,
+  Text,
+  ActivityIndicator,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Product, getAllProducts } from '@/services/firebase';
+import { Product, updateProduct, uploadImage } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
 import { GestureHandlerRootView, PinchGestureHandler, State, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import Animated, {
@@ -27,8 +31,75 @@ import Animated, {
   withSpring,
   useAnimatedGestureHandler,
 } from 'react-native-reanimated';
+import { usePermissions } from '@/hooks/usePermissions';
+import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { getDocs } from 'firebase/firestore';
+import { productsCollection } from '@/services/firebase';
+import { CachedImage } from '@/components/CachedImage';
+import { isDesktop, getCarouselWidth } from '@/utils/responsive';
 
 const { width, height } = Dimensions.get('window');
+
+const PRODUCTS_CACHE_KEY = 'products_cache';
+const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+export async function getAllProducts() {
+  try {
+    // Try to fetch from network first
+    const querySnapshot = await getDocs(productsCollection);
+    const products = querySnapshot.docs.map(doc => doc.data() as Product);
+    
+    // Cache the products locally
+    await AsyncStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      data: products
+    }));
+    
+    return products;
+  } catch (error) {
+    // If network request fails, try to get cached data
+    const cachedData = await AsyncStorage.getItem(PRODUCTS_CACHE_KEY);
+    if (cachedData) {
+      const { timestamp, data } = JSON.parse(cachedData);
+      
+      // Check if cache is still valid
+      if (Date.now() - timestamp < CACHE_EXPIRY_TIME) {
+        return data;
+      }
+    }
+    
+    // If no cache or expired cache, throw error
+    throw error;
+  }
+}
+
+export function NetworkStatus() {
+  const [isConnected, setIsConnected] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(state.isConnected ?? true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  if (isConnected) return null;
+
+  return (
+    <View style={{ 
+      backgroundColor: '#f44336',
+      padding: 8,
+      alignItems: 'center'
+    }}>
+      <Text style={{ color: 'white' }}>
+        No Internet Connection - Showing Cached Data
+      </Text>
+    </View>
+  );
+}
 
 export default function ProductViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,6 +109,7 @@ export default function ProductViewScreen() {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
+  const { canManageProducts } = usePermissions();
 
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -47,7 +119,9 @@ export default function ProductViewScreen() {
       (context as { startScale: number }).startScale = scale.value;
     },
     onActive: (event, context) => {
-      scale.value = (context as { startScale: number }).startScale * event.scale;
+      const newScale = (context as { startScale: number }).startScale * event.scale;
+      // Limit the min and max scale
+      scale.value = Math.min(Math.max(newScale, 0.5), 3);
     },
     onEnd: () => {
       if (scale.value < 1) {
@@ -76,8 +150,9 @@ export default function ProductViewScreen() {
       paddingRight: insets.right,
     },
     image: {
-      width: width,
-      height: width,
+      width: isDesktop() ? getCarouselWidth() : width,
+      height: isDesktop() ? getCarouselWidth() : width,
+      alignSelf: 'center',
     },
     pagination: {
       flexDirection: 'row',
@@ -123,6 +198,8 @@ export default function ProductViewScreen() {
     modalContainer: {
       flex: 1,
       backgroundColor: 'black',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     closeButton: {
       position: 'absolute',
@@ -139,8 +216,12 @@ export default function ProductViewScreen() {
       padding: 10,
     },
     fullScreenImage: {
-      width: '100%',
-      height: '100%',
+      maxWidth: '100%',
+      maxHeight: '90%',
+      width: width,
+      height: undefined,
+      aspectRatio: 1,
+      resizeMode: 'contain',
     },
     modalPagination: {
       flexDirection: 'row',
@@ -149,8 +230,8 @@ export default function ProductViewScreen() {
       alignSelf: 'center',
     },
     zoomableImage: {
-      width: width,
-      height: height,
+      width: '100%',
+      height: '100%',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -166,6 +247,47 @@ export default function ProductViewScreen() {
     },
     rightButton: {
       right: 10,
+    },
+    fab: {
+      position: 'absolute',
+      alignSelf: 'center',
+      bottom: 50,
+      backgroundColor: '#FB8A13',
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 4,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 3.84,
+    },
+    fabIcon: {
+      color: '#FFFFFF',
+    },
+    imageGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      marginTop: 16,
+    },
+    gridImageContainer: {
+      width: (width - 48) / 3, // 3 images per row with 16px padding and 8px gap
+      aspectRatio: 1,
+    },
+    gridImage: {
+      width: '100%',
+      height: '100%',
+      borderRadius: 8,
+    },
+    activeGridImage: {
+      borderWidth: 2,
+      borderColor: '#FB8A13',
     },
   });
 
@@ -186,7 +308,7 @@ export default function ProductViewScreen() {
   useEffect(() => {
     const loadProduct = async () => {
       const products = await getAllProducts();
-      const foundProduct = products.find(p => p.id === id);
+      const foundProduct = products.find((p: Product) => p.id === id);
       if (foundProduct) {
         setProduct(foundProduct);
       }
@@ -195,6 +317,9 @@ export default function ProductViewScreen() {
   }, [id]);
 
   const openModal = (index: number) => {
+    // Reset scale values when opening modal
+    scale.value = 1;
+    savedScale.value = 1;
     setSelectedImageIndex(index);
     setModalVisible(true);
   };
@@ -204,6 +329,68 @@ export default function ProductViewScreen() {
     savedScale.value = 1;
     setModalVisible(false);
   };
+
+  const handleAddImages = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 15,
+        quality: 1,
+      });
+
+      if (!result.canceled && product) {
+        const currentImages = product.images || [];
+        if (currentImages.length + result.assets.length > 15) {
+          Alert.alert('Error', 'Maximum 15 images allowed');
+          return;
+        }
+
+        const uploadPromises = result.assets.map(async (image) => {
+          try {
+            const imageUrl = await uploadImage(image.uri);
+            return imageUrl;
+          } catch (error) {
+            console.error('Error uploading image:', error);
+            throw error;
+          }
+        });
+
+        try {
+          const newImageUrls = await Promise.all(uploadPromises);
+          const updatedProduct = {
+            ...product,
+            images: [...currentImages, ...newImageUrls]
+          };
+          
+          await updateProduct(product.id, updatedProduct);
+          setProduct(updatedProduct);
+          Alert.alert('Success', 'Images added successfully');
+        } catch (error: any) {
+          Alert.alert('Error', 'Failed to upload images');
+        }
+      }
+    } catch (error) {
+      console.error('Error picking images:', error);
+      Alert.alert('Error', 'Failed to pick images');
+    }
+  };
+
+  const carouselRef = useRef<ScrollView>(null);
+
+  const handleGridImagePress = (index: number) => {
+    setActiveImageIndex(index);
+    // Scroll carousel to the selected image
+    if (carouselRef.current) {
+      carouselRef.current.scrollTo({ x: index * width, animated: true });
+    }
+    // Scroll main ScrollView to top
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
+  };
+
+  const scrollViewRef = useRef<ScrollView>(null);
 
   if (!product) {
     return (
@@ -217,13 +404,14 @@ export default function ProductViewScreen() {
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} />
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.safeArea}>
-          <ScrollView>
+          <ScrollView ref={scrollViewRef}>
             {/* Image Carousel */}
             <View>
               <TouchableOpacity onPress={() => handleShare()} style={styles.shareButton}>
                 <Ionicons name="share-outline" size={24} color="#FB8A13" />
               </TouchableOpacity>
               <ScrollView
+                ref={carouselRef}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -237,10 +425,14 @@ export default function ProductViewScreen() {
               >
                 {product?.images?.map((image, index) => (
                   <TouchableOpacity key={index} onPress={() => openModal(index)}>
-                    <Image
-                      source={{ uri: image }}
+                    <CachedImage
+                      uri={image}
                       style={styles.image}
-                      resizeMode="cover"
+                      placeholder={
+                        <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                          <ThemedText>Loading...</ThemedText>
+                        </View>
+                      }
                     />
                   </TouchableOpacity>
                 ))}
@@ -280,6 +472,30 @@ export default function ProductViewScreen() {
                   Category: {product.category}
                 </ThemedText>
               )}
+
+              {/* Add Image Grid */}
+              <View style={styles.imageGrid}>
+                {product?.images?.map((image, index) => (
+                  <TouchableOpacity 
+                    key={index}
+                    style={styles.gridImageContainer}
+                    onPress={() => handleGridImagePress(index)}
+                  >
+                    <CachedImage
+                      uri={image}
+                      style={[
+                        styles.gridImage,
+                        activeImageIndex === index && styles.activeGridImage
+                      ]}
+                      placeholder={
+                        <View style={[styles.gridImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                          <ActivityIndicator size="small" color="#FB8A13" />
+                        </View>
+                      }
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
             </ThemedView>
           </ScrollView>
         </SafeAreaView>
@@ -302,10 +518,15 @@ export default function ProductViewScreen() {
           
           <PinchGestureHandler onGestureEvent={pinchHandler}>
             <Animated.View style={styles.zoomableImage}>
-              <Animated.Image
-                source={{ uri: product?.images?.[selectedImageIndex] }}
+              <CachedImage
+                uri={product?.images?.[selectedImageIndex] || ''}
                 style={[styles.fullScreenImage, animatedImageStyle]}
                 resizeMode="contain"
+                placeholder={
+                  <View style={[styles.fullScreenImage, { backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' }]}>
+                    <ActivityIndicator size="large" color="#FB8A13" />
+                  </View>
+                }
               />
             </Animated.View>
           </PinchGestureHandler>
@@ -345,6 +566,15 @@ export default function ProductViewScreen() {
           )}
         </View>
       </Modal>
+
+      {canManageProducts() && (
+        <Pressable
+          style={[styles.fab, styles.fab]}
+          onPress={handleAddImages}
+        >
+          <Ionicons name="add" size={32} style={styles.fabIcon} />
+        </Pressable>
+      )}
     </GestureHandlerRootView>
   );
 }

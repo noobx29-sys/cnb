@@ -10,6 +10,7 @@ import { handleSignOut } from '@/utils/auth';
 import { getAllPromotions } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getCarouselWidth } from '@/utils/responsive';
 
 // Promotion types
 interface Promotion {
@@ -67,11 +68,14 @@ export default function HomeScreen() {
       flexWrap: 'wrap',
       gap: 8,
       padding: 8,
+      width: getCarouselWidth(),
+      alignSelf: 'center',
     },
     imageContainer: {
       width: '100%',
-      aspectRatio: 1,
+      height: 500,
       position: 'relative',
+      alignSelf: 'center',
     },
     promoImage: {
       width: '100%',
