@@ -15,7 +15,6 @@
     },
     "ios": {
       "bundleIdentifier": "com.cnb.app",
-      "versionCode": 1,
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to location to show the office locations on the map.",

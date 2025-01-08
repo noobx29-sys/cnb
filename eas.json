@@ -19,12 +19,13 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease",
-        "androidGradlePluginVersion": "7.4.2"
+        "gradleCommand": ":app:assembleRelease"
       },
+      "node": "18.17.0",
       "env": {
         "ANDROID_NDK_HOME": "/usr/local/share/android-ndk",
-        "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk"
+        "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk",
+        "NODE_OPTIONS": "--max_old_space_size=4096"
       }
     },
     "production": {
