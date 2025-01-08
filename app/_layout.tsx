@@ -34,7 +34,17 @@ export default function RootLayout() {
     <ColorSchemeProvider>
       <ThemeProvider value={DarkTheme}>
         <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack 
+            screenOptions={{ 
+              headerShown: false,
+              // Add these to ensure proper navigation behavior
+              animation: Platform.select({
+                ios: 'default',
+                android: 'fade',
+                default: 'none'
+              }),
+            }}
+          >
             <Stack.Screen 
               name="(auth)" 
               options={{
@@ -42,7 +52,13 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="+not-found" options={{ headerShown: true }} />
+            <Stack.Screen 
+              name="+not-found" 
+              options={{ 
+                headerShown: true,
+                title: 'Oops!'
+              }} 
+            />
           </Stack>
           <StatusBar style="light" />
         </AuthProvider>

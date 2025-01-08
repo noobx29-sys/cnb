@@ -68,7 +68,7 @@ export default function AdminProductScreen() {
     },
     productText: {
       color: '#000',
-      fontWeight: 'medium',
+      fontWeight: 'normal',
     },
     categoryItem: {
       padding: 16,
@@ -100,7 +100,10 @@ export default function AdminProductScreen() {
     },
     promotionText: {
       color: '#000',
-      fontWeight: 'medium',
+      fontWeight: 'normal',
+    },
+    rootView: {
+      flex: 1,
     },
   });
 
@@ -145,86 +148,85 @@ export default function AdminProductScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
       <ScrollView 
-          style={styles.container}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#FB8A13']} // Android
-              tintColor="#FB8A13" // iOS
-            />
-          }
-        >
+        style={styles.container}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#FB8A13']}
+            tintColor="#FB8A13"
+          />
+        }
+      >
         <ThemedView style={styles.header}>
           <ThemedText type="title">Product Management</ThemedText>
         </ThemedView>
 
-      {/* Add New Product Button */}
-      <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/product') }}>
-        <IconSymbol name="plus.circle.fill" size={24} color="#FFFFFF" />
-        <ThemedText style={styles.buttonText}>Add New Product</ThemedText>
-      </Pressable>
+        {/* Add New Product Button */}
+        <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/product') }}>
+          <IconSymbol name="plus.circle.fill" size={24} color="#FFFFFF" />
+          <ThemedText style={styles.buttonText}>Add New Product</ThemedText>
+        </Pressable>
 
-      {/* Manage Categories Button */}
-      <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/category') }}>
-        <IconSymbol name="tag.fill" size={24} color="#FFFFFF" />
-        <ThemedText style={styles.buttonText}>Manage Categories</ThemedText>
-      </Pressable>
+        {/* Manage Categories Button */}
+        <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/category') }}>
+          <IconSymbol name="tag.fill" size={24} color="#FFFFFF" />
+          <ThemedText style={styles.buttonText}>Manage Categories</ThemedText>
+        </Pressable>
 
-      {/* Add New Promotion Button */}
-      <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/promotion') }}>
-        <IconSymbol name="sparkles" size={24} color="#FFFFFF" />
-        <ThemedText style={styles.buttonText}>Manage Promotions</ThemedText>
-      </Pressable>
+        {/* Add New Promotion Button */}
+        <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/promotion') }}>
+          <IconSymbol name="sparkles" size={24} color="#FFFFFF" />
+          <ThemedText style={styles.buttonText}>Manage Promotions</ThemedText>
+        </Pressable>
 
-      {/* Products List */}
-      <ThemedView style={styles.section}>
-        <Collapsible title={`Products (${products.length})`}>
-          {products.map(product => (
-            <Pressable 
-              key={product.id} 
-              style={styles.productItem}
-              onPress={() => {
-                router.push({
-                  pathname: "/admin/product/[id]",
-                  params: { id: product.id }
-                });
-              }}
-            >
-              <ThemedText style={styles.productText}>{product.name}</ThemedText>
-              <IconSymbol name="chevron.right" size={20} color="#808080" />
-            </Pressable>
-          ))}
-        </Collapsible>
-      </ThemedView>
+        {/* Products List */}
+        <ThemedView style={styles.section}>
+          <Collapsible title={`Products (${products.length})`}>
+            {products.map(product => (
+              <Pressable 
+                key={product.id} 
+                style={styles.productItem}
+                onPress={() => {
+                  router.push({
+                    pathname: "/admin/product/[id]",
+                    params: { id: product.id }
+                  });
+                }}
+              >
+                <ThemedText style={styles.productText}>{product.name}</ThemedText>
+                <IconSymbol name="chevron.right" size={20} color="#808080" />
+              </Pressable>
+            ))}
+          </Collapsible>
+        </ThemedView>
 
-      {/* Promotions List */}
-      <ThemedView style={styles.section}>
-        <Collapsible title={`Promotions (${promotions.length})`}>
-          {promotions.map(promotion => (
-            <Pressable 
-              key={promotion.id} 
-              style={styles.promotionItem}
-              onPress={() => {
-                console.log('Promotion clicked:', promotion.id);
-                router.push({
-                  pathname: "/admin/promotion/[id]",
-                  params: { id: promotion.id }
-                });
-              }}
-            >
-              <ThemedText style={styles.promotionText}>
-                {promotion.title || promotion.name}
-              </ThemedText>
-              <IconSymbol name="chevron.right" size={20} color="#808080" />
-            </Pressable>
-          ))}
-        </Collapsible>
-      </ThemedView>
+        {/* Promotions List */}
+        <ThemedView style={styles.section}>
+          <Collapsible title={`Promotions (${promotions.length})`}>
+            {promotions.map(promotion => (
+              <Pressable 
+                key={promotion.id} 
+                style={styles.promotionItem}
+                onPress={() => {
+                  console.log('Promotion clicked:', promotion.id);
+                  router.push({
+                    pathname: "/admin/promotion/[id]",
+                    params: { id: promotion.id }
+                  });
+                }}
+              >
+                <ThemedText style={styles.promotionText}>
+                  {promotion.title || promotion.name}
+                </ThemedText>
+                <IconSymbol name="chevron.right" size={20} color="#808080" />
+              </Pressable>
+            ))}
+          </Collapsible>
+        </ThemedView>
 
-      {/* Categories List */}
+        {/* Categories List */}
         <ThemedView style={styles.section}>
           <Collapsible title={`Categories (${categories.length})`}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -240,8 +242,7 @@ export default function AdminProductScreen() {
             </ScrollView>
           </Collapsible>
         </ThemedView>
-        </ScrollView>
-      </SafeAreaView>
+      </ScrollView>
     </ThemedView>
   );
 }

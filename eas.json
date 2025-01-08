@@ -4,17 +4,6 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
-      },
-      "env": {
-        "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk"
-      }
-    },
     "preview": {
       "distribution": "internal",
       "android": {
@@ -25,17 +14,10 @@
       "env": {
         "ANDROID_NDK_HOME": "/usr/local/share/android-ndk",
         "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk",
-        "NODE_OPTIONS": "--max_old_space_size=4096"
-      }
-    },
-    "production": {
-      "autoIncrement": true,
-      "android": {
-        "buildType": "app-bundle"
+        "NODE_OPTIONS": "--max_old_space_size=4096",
+        "EXPO_USE_CUSTOM_ANDROID_SETTINGS": "true",
+        "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"  
       }
     }
-  },
-  "submit": {
-    "production": {}
   }
 }
