@@ -8,7 +8,9 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "gradleCommand": ":app:assembleRelease",
+        "withoutCredentials": false,
+        "image": "ubuntu-22.04-jdk-17-ndk-r25c"
       },
       "node": "18.17.0",
       "env": {
@@ -16,7 +18,7 @@
         "ANDROID_SDK_ROOT": "/usr/local/share/android-sdk",
         "NODE_OPTIONS": "--max_old_space_size=4096",
         "EXPO_USE_CUSTOM_ANDROID_SETTINGS": "true",
-        "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g"  
+        "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
       }
     }
   }
