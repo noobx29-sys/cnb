@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useColorScheme as useSystemColorScheme } from 'react-native';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type ColorScheme = 'light' | 'dark';
@@ -9,14 +9,14 @@ interface ColorSchemeContextType {
   toggleColorScheme: () => void;
 }
 
-const COLOR_SCHEME_KEY = '@color_scheme';
 const ColorSchemeContext = createContext<ColorSchemeContextType | undefined>(undefined);
 
-export function ColorSchemeProvider({ children }: { children: React.ReactNode }) {
-  const systemColorScheme = useSystemColorScheme() as ColorScheme;
-  const [colorScheme, setColorScheme] = useState<ColorScheme>(systemColorScheme);
+const COLOR_SCHEME_KEY = '@color_scheme';
 
-  // Load saved preference on mount
+export function ColorSchemeProvider({ children }: { children: React.ReactNode }) {
+  const deviceColorScheme = useDeviceColorScheme() as ColorScheme;
+  const [colorScheme, setColorScheme] = useState<ColorScheme>(deviceColorScheme);
+
   useEffect(() => {
     const loadColorScheme = async () => {
       try {
@@ -50,6 +50,8 @@ export function ColorSchemeProvider({ children }: { children: React.ReactNode })
 
 export const useColorScheme = () => {
   const context = useContext(ColorSchemeContext);
-  if (!context) throw new Error('useColorScheme must be used within ColorSchemeProvider');
+  if (!context) {
+    throw new Error('useColorScheme must be used within ColorSchemeProvider');
+  }
   return context;
 }; 

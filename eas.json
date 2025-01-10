@@ -10,7 +10,7 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
         "withoutCredentials": false,
-        "image": "ubuntu-22.04-jdk-17-ndk-r25c"
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
       },
       "node": "18.17.0",
       "env": {

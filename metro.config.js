@@ -1,14 +1,6 @@
-const { getDefaultConfig } = require('expo/metro-config');
+const { getDefaultConfig } = require('@expo/metro-config');
 
-const config = getDefaultConfig(__dirname);
+const defaultConfig = getDefaultConfig(__dirname);
+defaultConfig.resolver.sourceExts.push('cjs');
 
-// Add this configuration to reduce file watching
-config.watchFolders = [__dirname];
-config.resolver.nodeModulesPaths = [__dirname + '/node_modules'];
-config.watcher = {
-  watchman: {
-    crawlSymlinks: false,
-  },
-};
-
-module.exports = config;
+module.exports = defaultConfig;

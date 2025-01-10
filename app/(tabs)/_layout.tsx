@@ -40,10 +40,6 @@ export default function TabLayout() {
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme].tint,
           headerShown: false,
-          tabBarButton: Platform.select({
-            ios: HapticTab,
-            android: undefined,
-          }),
           tabBarBackground: TabBarBackground,
           tabBarStyle: {
             ...Platform.select({

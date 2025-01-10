@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { 
   StyleSheet, 
   Image, 
@@ -35,7 +36,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { getDocs } from 'firebase/firestore';
+import { getDocs } from '@firebase/firestore';
 import { productsCollection } from '@/services/firebase';
 import { CachedImage } from '@/components/CachedImage';
 import { isDesktop, getCarouselWidth } from '@/utils/responsive';
@@ -101,7 +102,7 @@ export function NetworkStatus() {
   );
 }
 
-export default function ProductViewScreen() {
+const ProductViewScreen = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -578,3 +579,5 @@ export default function ProductViewScreen() {
     </GestureHandlerRootView>
   );
 }
+
+export default ProductViewScreen;

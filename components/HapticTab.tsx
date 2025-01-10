@@ -8,7 +8,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Platform, View } from 'react-native';
 
-export function HapticTab(props: BottomTabBarButtonProps) {
+type HapticTabProps = {
+  [K in keyof BottomTabBarButtonProps]: 
+    BottomTabBarButtonProps[K] extends (infer T | null) 
+      ? T | undefined 
+      : BottomTabBarButtonProps[K];
+};
+
+export const HapticTab = (props: HapticTabProps) => {
   const scale = useSharedValue(1);
   
   const animatedStyle = useAnimatedStyle(() => ({
@@ -49,4 +56,4 @@ export function HapticTab(props: BottomTabBarButtonProps) {
       </Animated.View>
     </PlatformPressable>
   );
-}
+};

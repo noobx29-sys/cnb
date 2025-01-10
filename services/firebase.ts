@@ -1,7 +1,7 @@
 import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getFirestore, collection, doc, setDoc, getDoc, query, where, getDocs, deleteDoc, addDoc, serverTimestamp, updateDoc, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
-import { firebaseConfig } from '@/firebaseConfig';
+import firebaseConfig from '@/firebaseConfig';
 import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';

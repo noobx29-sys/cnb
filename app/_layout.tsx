@@ -6,7 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, View } from 'react-native';
 import { AnimatedSplashScreen } from '@/components/AnimatedSplashScreen';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ColorSchemeProvider } from '@/context/ColorSchemeContext';
 
 // Keep the splash screen visible while we fetch resources
@@ -30,46 +30,35 @@ export default function RootLayout() {
     return null;
   }
 
-  const Content = () => (
+  return (
     <ColorSchemeProvider>
       <ThemeProvider value={DarkTheme}>
         <AuthProvider>
-          <Stack 
-            screenOptions={{ 
-              headerShown: false,
-              // Add these to ensure proper navigation behavior
-              animation: Platform.select({
-                ios: 'default',
-                android: 'fade',
-                default: 'none'
-              }),
-            }}
-          >
-            <Stack.Screen 
-              name="(auth)" 
-              options={{
-                animation: 'none',
+          <AnimatedSplashScreen onAnimationComplete={onAnimationComplete}>
+            <Stack 
+              screenOptions={{ 
+                headerShown: false,
+                animation: Platform.select({
+                  ios: 'default',
+                  android: 'fade',
+                  default: 'none'
+                }),
               }}
-            />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen 
-              name="+not-found" 
-              options={{ 
-                headerShown: true,
-                title: 'Oops!'
-              }} 
-            />
-          </Stack>
-          <StatusBar style="light" />
+            >
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" options={{ animation: 'none' }} />
+              <Stack.Screen 
+                name="+not-found" 
+                options={{ 
+                  headerShown: true,
+                  title: 'Oops!'
+                }} 
+              />
+            </Stack>
+            <StatusBar style="light" />
+          </AnimatedSplashScreen>
         </AuthProvider>
       </ThemeProvider>
     </ColorSchemeProvider>
-  );
-
-  // Use AnimatedSplashScreen for both platforms
-  return (
-    <AnimatedSplashScreen onAnimationComplete={onAnimationComplete}>
-      <Content />
-    </AnimatedSplashScreen>
   );
 }
