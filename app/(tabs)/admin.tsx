@@ -162,7 +162,7 @@ export default function Admin() {
       {/* Add New Product Button */}
       <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/product') }}>
         <IconSymbol name="plus.circle.fill" size={24} color="#FFFFFF" />
-        <ThemedText style={styles.buttonText}>Add New Product</ThemedText>
+        <ThemedText style={styles.buttonText}>Add Product</ThemedText>
       </Pressable>
 
       {/* Manage Categories Button */}
@@ -174,7 +174,7 @@ export default function Admin() {
       {/* Add New Promotion Button */}
       <Pressable style={styles.actionButton} onPress={() => { router.push('/admin/promotion') }}>
         <IconSymbol name="sparkles" size={24} color="#FFFFFF" />
-        <ThemedText style={styles.buttonText}>Manage Promotions</ThemedText>
+        <ThemedText style={styles.buttonText}>Add Promotion</ThemedText>
       </Pressable>
 
       {/* Products List */}

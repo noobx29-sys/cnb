@@ -1,13 +1,14 @@
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput, Pressable, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { signInWithEmailAndPassword, setPersistence, getReactNativePersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, getReactNativePersistence, sendPasswordResetEmail } from 'firebase/auth';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc } from 'firebase/firestore';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { auth } from '@/services/firebase';
+import { auth, db } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
 
 export default function SignIn() {
@@ -82,6 +83,15 @@ export default function SignIn() {
       height: '100%',
       justifyContent: 'center',
     },
+    forgotPassword: {
+      alignSelf: 'center',
+      marginTop: 10,
+      marginBottom: 4,
+    },
+    forgotPasswordText: {
+      color: '#FB8A13',
+      fontSize: 14,
+    },
   }); 
 
   const router = useRouter();
@@ -93,6 +103,22 @@ export default function SignIn() {
       }
 
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Check user's role in Firestore
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userData = userDoc.data();
+      
+      if (userData?.role === 'Pending') {
+        // Sign out the user immediately
+        await auth.signOut();
+        Alert.alert(
+          'Account Pending Approval',
+          'Your account is currently waiting for administrator approval. You will receive an email once your account has been approved.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       console.log('Sign in successful, user ID:', userCredential.user.uid);
       
       // Store user data in AsyncStorage
@@ -101,6 +127,25 @@ export default function SignIn() {
       
     } catch (error: any) {
       console.error('Sign in error:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Please enter your email address first');
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Password Reset Email Sent',
+        'Please check your email for instructions to reset your password.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Password reset error:', error);
       Alert.alert('Error', error.message);
     }
   };
@@ -152,6 +197,9 @@ export default function SignIn() {
           </Pressable>
         </Link>
       </ThemedView>
+      <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
+        <ThemedText style={styles.forgotPasswordText}>Forgot password?</ThemedText>
+      </TouchableOpacity>
     </ThemedView>
   );
 }

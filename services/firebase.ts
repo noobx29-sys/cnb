@@ -13,11 +13,17 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Auth with AsyncStorage persistence
 let auth: ReturnType<typeof getAuth>;
 try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
+  // Check if auth is already initialized
+  auth = getAuth(app);
+  // If auth exists but wasn't initialized with persistence, reinitialize it
+  if (!auth.currentUser?.metadata?.lastSignInTime) {
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
+  }
 } catch (error) {
-  // If initialization with persistence fails, get existing auth instance
+  console.log('Auth initialization error:', error);
+  // If initialization fails, try getting existing auth instance
   auth = getAuth(app);
 }
 
@@ -37,7 +43,7 @@ export interface UserData {
   name: string;
   companyName: string;
   fullName: string;
-  role: 'user' | 'admin' | 'manager';
+  role: UserRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +98,17 @@ export interface Promotion {
   updatedAt?: Date;
   images?: string[];
   productId: string;
+}
+
+// User roles
+export type UserRole = 'Admin' | 'Manager' | 'User - Price' | 'User - No Price' | 'Pending';
+
+// Update or add this interface
+export interface User {
+  uid: string;
+  email: string;
+  role: UserRole;
+  // ... other user fields ...
 }
 
 // Firebase collections
@@ -509,7 +526,7 @@ export const getAllUsers = async () => {
   return snapshot.docs.map(doc => doc.data() as UserData);
 };
 
-export const updateUserRole = async (userId: string, newRole: 'user' | 'manager' | 'admin') => {
+export const updateUserRole = async (userId: string, newRole: UserRole) => {
   const userRef = doc(usersCollection, userId);
   await updateDoc(userRef, {
     role: newRole,
@@ -531,4 +548,15 @@ export const verifyUserRole = async (userId: string) => {
     console.error('Error verifying user role:', error);
     return null;
   }
+};
+
+// Add this function to handle new user registration
+export const createNewUser = async (uid: string, email: string) => {
+  const userRef = doc(db, 'users', uid);
+  await setDoc(userRef, {
+    uid,
+    email,
+    role: 'Pending', // Default role for new users
+    createdAt: serverTimestamp(),
+  });
 };

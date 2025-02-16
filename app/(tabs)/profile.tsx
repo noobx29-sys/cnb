@@ -133,7 +133,7 @@ export default function ProfileScreen() {
               <ThemedText style={[styles.value, { textTransform: 'capitalize' }]}>{userData.role}</ThemedText>
             </ThemedView>
 
-            {userData.role === 'admin' && (
+            {userData.role === 'Admin' && (
               <Pressable 
                 style={styles.adminButton}
                 onPress={() => router.push('/admin/users')}

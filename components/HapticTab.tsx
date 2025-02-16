@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
   useSharedValue 
 } from 'react-native-reanimated';
-import { Platform, View } from 'react-native';
+import { GestureResponderEvent, Platform, View } from 'react-native';
 
 type HapticTabProps = {
   [K in keyof BottomTabBarButtonProps]: 
@@ -42,7 +42,7 @@ export const HapticTab = (props: HapticTabProps) => {
   return (
     <PlatformPressable
       {...props}
-      onPressIn={(ev) => {
+      onPressIn={(ev: GestureResponderEvent) => {
         scale.value = withSpring(0.95);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         props.onPressIn?.(ev);

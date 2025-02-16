@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Pressable, TextInput, Alert, ScrollView, SafeAreaView, Image, useColorScheme, Platform, StatusBar } from 'react-native';
+import { StyleSheet, Pressable, TextInput, Alert, ScrollView, SafeAreaView, Image, useColorScheme, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -22,6 +22,8 @@ export default function EditPromotionScreen() {
   const [discountTypeDropdownOpen, setDiscountTypeDropdownOpen] = useState(false);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
+
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (!canManagePromotions()) {
@@ -367,12 +369,17 @@ export default function EditPromotionScreen() {
     dateButtonText: {
       color: colorScheme === 'dark' ? Colors.light.text : Colors.dark.text,
     },
+    loadingIndicator: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
   });
 
   if (!promotion) {
     return (
       <SafeAreaView style={styles.container}>
-        <ThemedText>Loading...</ThemedText>
+        <ActivityIndicator size="large" color="#FB8A13" style={styles.loadingIndicator} />
       </SafeAreaView>
     );
   }

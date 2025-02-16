@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { StyleSheet, Pressable, TextInput, Alert, ScrollView, SafeAreaView, Image, useColorScheme, Platform, StatusBar, View } from 'react-native';
+import { StyleSheet, Pressable, TextInput, Alert, ScrollView, SafeAreaView, Image, useColorScheme, Platform, StatusBar, View, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -223,6 +223,11 @@ export default function EditProductScreen() {
       fontSize: 14,
       color: Colors.light.textMuted,
     },
+    loadingIndicator: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
   });
 
   useEffect(() => {
@@ -362,7 +367,7 @@ export default function EditProductScreen() {
   if (!product) {
     return (
       <SafeAreaView style={styles.container}>
-        <ThemedText>Loading...</ThemedText>
+        <ActivityIndicator size="large" color="#FB8A13" style={styles.loadingIndicator} />
       </SafeAreaView>
     );
   }

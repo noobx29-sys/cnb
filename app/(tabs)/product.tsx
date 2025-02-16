@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Pressable, Image, ActivityIndicator, ScrollView, SafeAreaView, RefreshControl, TextInput, useColorScheme, Platform, View } from 'react-native';
-import { router } from 'expo-router';
+import { StyleSheet, Pressable, Image, ActivityIndicator, ScrollView, SafeAreaView, RefreshControl, TextInput, useColorScheme, Platform, View, Dimensions } from 'react-native';
+import { router, useRouter } from 'expo-router';
 import { StatusBar } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -44,16 +44,19 @@ export default function ProductScreen() {
   ]);
   const [loading, setLoading] = useState(true);
   const { canManageProducts } = usePermissions();
+  const { canSeePrice } = usePermissions();
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubSubCategory, setSelectedSubSubCategory] = useState<string | null>(null);
+  const router = useRouter();
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     safeArea: {
       flex: 1,
@@ -129,6 +132,7 @@ export default function ProductScreen() {
     searchContainer: {
       padding: 8,
       width: '100%',
+      marginTop: Platform.OS === 'android' ? 8 : 0,
     },
     searchInput: {
       color: '#999999',
@@ -225,6 +229,13 @@ export default function ProductScreen() {
       color: Colors.light.tint,
       fontWeight: '500',
       opacity: 1,
+    },
+    contactMessage: {
+      fontSize: 14,
+      color: Colors.light.tint,
+      fontWeight: 'bold',
+      padding: 8,
+      paddingTop: 0,
     },
   });
 
@@ -408,6 +419,11 @@ export default function ProductScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <StatusBar 
+        backgroundColor="transparent"
+        translucent={true}
+        barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
+      />
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.searchContainer}>
           <TextInput
@@ -503,9 +519,15 @@ export default function ProductScreen() {
                   <ThemedText numberOfLines={2} style={styles.productName}>
                     {product.name}
                   </ThemedText>
-                  <ThemedText style={styles.productPrice}>
-                    RM{product.price.toFixed(2)}
-                  </ThemedText>
+                  {canSeePrice() ? (
+                    <ThemedText style={styles.productPrice}>
+                      RM{product.price.toFixed(2)}
+                    </ThemedText>
+                  ) : (
+                    <ThemedText style={styles.contactMessage}>
+                      Contact us for price
+                    </ThemedText>
+                  )}
                 </Pressable>
               ))
             )}

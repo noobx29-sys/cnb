@@ -4,12 +4,10 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, View } from 'react-native';
-import { AnimatedSplashScreen } from '@/components/AnimatedSplashScreen';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { Platform } from 'react-native';
+import { AuthProvider } from '@/context/AuthContext';
 import { ColorSchemeProvider } from '@/context/ColorSchemeContext';
 
-// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {
   /* reloading the app might trigger some race conditions, ignore them */
 });
@@ -18,13 +16,12 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
-  const [splashAnimationFinished, setSplashAnimationFinished] = useState(false);
 
-  const onAnimationComplete = useCallback((finished: boolean) => {
-    if (finished) {
-      setSplashAnimationFinished(true);
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
     }
-  }, []);
+  }, [loaded]);
 
   if (!loaded) {
     return null;
@@ -34,29 +31,26 @@ export default function RootLayout() {
     <ColorSchemeProvider>
       <ThemeProvider value={DarkTheme}>
         <AuthProvider>
-          <AnimatedSplashScreen onAnimationComplete={onAnimationComplete}>
-            <Stack 
-              screenOptions={{ 
-                headerShown: false,
-                animation: Platform.select({
-                  ios: 'default',
-                  android: 'fade',
-                  default: 'none'
-                }),
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: Platform.OS === 'ios' ? 'default' : 'none',
+              gestureEnabled: Platform.OS === 'ios',
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="admin" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="+not-found"
+              options={{
+                title: 'Oops!',
+                headerShown: true,
               }}
-            >
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(auth)" options={{ animation: 'none' }} />
-              <Stack.Screen 
-                name="+not-found" 
-                options={{ 
-                  headerShown: true,
-                  title: 'Oops!'
-                }} 
-              />
-            </Stack>
-            <StatusBar style="light" />
-          </AnimatedSplashScreen>
+            />
+          </Stack>
+          <StatusBar style="light" />
         </AuthProvider>
       </ThemeProvider>
     </ColorSchemeProvider>

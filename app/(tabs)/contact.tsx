@@ -8,7 +8,7 @@ import { ExternalLink } from '@/components/ExternalLink';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
 import { SvgXml } from 'react-native-svg';
 import { Colors } from '@/constants/Colors';
 export default function Contact() {
@@ -53,6 +53,7 @@ export default function Contact() {
       fontSize: 20,
       fontWeight: 'bold',
       marginTop: 16,
+      marginBottom: 4,
     },
     sectionContent: {
       marginBottom: 12,
@@ -112,11 +113,71 @@ export default function Contact() {
     setMapError(true);
   }, []);
 
+  const renderMap = (latitude: number, longitude: number, title: string) => {
+    if (Platform.OS === 'android') {
+      // Return address information based on the location
+      if (latitude === 3.111126 && longitude === 101.611626) {
+        return (
+          <ThemedView style={{ marginVertical: 10, padding: 12, backgroundColor: '#e0e0e0', borderRadius: 10 }}>
+            <ThemedText style={{ fontSize: 16, lineHeight: 24, color: '#4a4a4a' }}>
+              No. 12, Jalan 51/225A,{'\n'}
+              Zon Perindustrian PJCT,{'\n'}
+              46100 Petaling Jaya,{'\n'}
+              Selangor, Malaysia
+            </ThemedText>
+          </ThemedView>
+        );
+      } else if (latitude === 3.06937 && longitude === 101.662009) {
+        return (
+          <ThemedView style={{ marginVertical: 10, padding: 12, backgroundColor: '#e0e0e0', borderRadius: 10 }}>
+            <ThemedText style={{ fontSize: 16, lineHeight: 24, color: '#4a4a4a' }}>
+              No. 1, Jalan Puteri 7/13A,{'\n'}
+              Bandar Puteri,{'\n'}
+              47100 Puchong,{'\n'}
+              Selangor, Malaysia
+            </ThemedText>
+          </ThemedView>
+        );
+      }
+    }
+
+    return (
+      <MapView
+        provider={PROVIDER_DEFAULT}
+        style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
+        initialRegion={{
+          latitude: latitude,
+          longitude: longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+        onLayout={(e) => {
+          try {
+            // Map loaded successfully
+          } catch (error) {
+            handleMapError(error);
+          }
+        }}
+      >
+        <Marker
+          coordinate={{
+            latitude: latitude,
+            longitude: longitude,
+          }}
+          title={title}
+        />
+      </MapView>
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView
           style={styles.scrollContainer}
+          removeClippedSubviews={true}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -146,31 +207,7 @@ export default function Contact() {
                 Petaling Jaya Office
               </ThemedText>
               {!mapError ? (
-                <MapView
-                  style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
-                  initialRegion={{
-                    latitude: 3.111126,
-                    longitude: 101.611626,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  onLayout={(e) => {
-                    try {
-                      // Map loaded successfully
-                    } catch (error) {
-                      handleMapError(error);
-                    }
-                  }}
-                >
-                  <Marker
-                    coordinate={{
-                      latitude: 3.111126,
-                      longitude: 101.611626,
-                    }}
-                    title="CNB Carpets PJ Office"
-                    description="No.18, Jalan SS2/3, 47300 Petaling Jaya"
-                  />
-                </MapView>
+                renderMap(3.111126, 101.611626, "CNB Carpets PJ Office")
               ) : (
                 <ThemedText style={styles.sectionContent}>
                   Map temporarily unavailable
@@ -184,11 +221,11 @@ export default function Contact() {
                   </ThemedText>
                 </ThemedView>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/60162087930')}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://wa.me/60162067930')}>
                 <ThemedView style={styles.linkContainer}>
                   <FontAwesome5 name="whatsapp" size={34} color="#25D366" />
                   <ThemedText style={styles.contactInfo}>
-                    +60162087930 (Whatsapp only)
+                    +60162067930 (Whatsapp only)
                   </ThemedText>
                 </ThemedView>
               </TouchableOpacity>
@@ -222,41 +259,17 @@ export default function Contact() {
                 Puchong Office
               </ThemedText>
               {!mapError ? (
-                <MapView
-                  style={{ width: '100%', height: 200, marginVertical: 10, borderRadius: 10 }}
-                  initialRegion={{
-                    latitude: 3.06937,
-                    longitude: 101.662009,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  }}
-                  onLayout={(e) => {
-                    try {
-                      // Map loaded successfully
-                    } catch (error) {
-                      handleMapError(error);
-                    }
-                  }}
-                >
-                  <Marker
-                    coordinate={{
-                      latitude: 3.06937,
-                      longitude: 101.662009,
-                    }}
-                    title="CNB Carpets Puchong Office"
-                    description="No.59, Jalan 10/152, Taman Industrial O.U.G."
-                  />
-                </MapView>
+                renderMap(3.06937, 101.662009, "CNB Carpets Puchong Office")
               ) : (
                 <ThemedText style={styles.sectionContent}>
                   Map temporarily unavailable
                 </ThemedText>
               )}
-              <TouchableOpacity onPress={() => handlePhoneCall('60377833377')} style={{marginBottom: 10}}>
+              <TouchableOpacity onPress={() => handlePhoneCall('603776663377')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>
                   <Ionicons name="call" size={30} color="#FB8A13" />
                   <ThemedText style={styles.contactInfo}>
-                    +603 7783 3377
+                    +603 7666 3377
                   </ThemedText>
                 </ThemedView>
               </TouchableOpacity>

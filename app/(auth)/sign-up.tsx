@@ -95,6 +95,11 @@ export default function SignUp() {
       return;
     }
 
+    if (!name || !email || !password || !companyName || !fullName) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
     try {
       if (!auth) {
         console.error('Auth is not initialized');
@@ -108,11 +113,22 @@ export default function SignUp() {
         name: name,
         companyName: companyName,
         fullName: fullName,
-        role: 'user',
+        role: 'Pending',
       });
 
-      router.replace('/sign-in');
-      Alert.alert('Success', 'Account created successfully! Please sign in.');
+      // Sign out the user immediately since they're pending
+      await auth.signOut();
+
+      Alert.alert(
+        'Account Created',
+        'Your account has been created and is pending admin approval. You will receive an email once your account is approved.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/sign-in')
+          }
+        ]
+      );
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }

@@ -1,6 +1,8 @@
-const { getDefaultConfig } = require('@expo/metro-config');
+const { getDefaultConfig } = require('expo/metro-config');
 
-const defaultConfig = getDefaultConfig(__dirname);
-defaultConfig.resolver.sourceExts.push('cjs');
+const config = getDefaultConfig(__dirname);
 
-module.exports = defaultConfig;
+// Remove all console logs in production...
+config.transformer.minifierConfig.compress.drop_console = true;
+
+module.exports = config;

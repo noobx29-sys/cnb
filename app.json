@@ -8,6 +8,7 @@
     "scheme": "cnb",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "developmentClient": false,
     "splash": {
       "image": "./assets/images/cnb-app.png",
       "resizeMode": "contain",
@@ -30,32 +31,9 @@
         "backgroundColor": "#FB8A13"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
       ]
-    },
-        "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/cnb-app.png",
-      "name": "CNB Carpets Admin",
-      "shortName": "CNB Admin",
-      "startUrl": "/admin",
-      "backgroundColor": "#FB8A13",
-      "themeColor": "#FB8A13",
-      "display": "standalone",
-      "config": {
-        "firebase": {
-          "apiKey": "AIzaSyB558CviT50ttHxIeSVROTEpxhu_h8Wias",
-          "authDomain": "cnb-app-f2ed6.firebaseapp.com",
-          "databaseURL": "https://cnb-app-f2ed6.firebaseio.com",
-          "projectId": "cnb-app-f2ed6",
-          "storageBucket": "cnb-app-f2ed6.firebasestorage.app",
-          "messagingSenderId": "465463891466",
-          "appId": "1:465463891466:ios:91389050378e1701b9f1f3"
-        }
-      }
     },
     "plugins": [
       "expo-router",
@@ -82,7 +60,8 @@
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "tsconfigPaths": true
     },
     "extra": {
       "router": {

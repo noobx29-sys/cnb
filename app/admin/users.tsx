@@ -5,6 +5,9 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
 import { Searchbar } from 'react-native-paper';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
+import { Picker } from '@react-native-picker/picker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -13,7 +16,7 @@ import { getAllUsers, updateUserRole, UserData } from '@/services/firebase';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 
-type UserRole = 'user' | 'manager' | 'admin';
+type UserRole = 'Admin' | 'Manager' | 'User - Price' | 'User - No Price' | 'Pending';
 
 export default function AdminUsersScreen() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -162,7 +165,7 @@ export default function AdminUsersScreen() {
     },
   }); 
 
-  const roles: UserRole[] = ['user', 'manager', 'admin'];
+  const roleOptions: UserRole[] = ['Admin', 'Manager', 'User - Price', 'User - No Price', 'Pending'];
 
   useEffect(() => {
     console.log('Current user data:', userData);
@@ -214,53 +217,60 @@ export default function AdminUsersScreen() {
     setFilteredUsers(filtered);
   };
 
-  const handleUpdateRole = async (userId: string, newRole: UserRole) => {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
-      console.log('Attempting to update role:', {
-        userId,
-        newRole,
-        currentUserData: userData,
-        targetUser: users.find(user => user.uid === userId)
-      });
-
-      if (userData?.role !== 'admin') {
-        Alert.alert('Access Denied', 'Only administrators can modify user roles.');
+      // Don't allow non-admins to change roles
+      if (userData?.role !== 'Admin') {
+        Alert.alert('Error', 'Only administrators can modify user roles');
         return;
       }
 
-      const targetUser = users.find(user => user.uid === userId);
-      if (!targetUser) {
-        Alert.alert('Error', 'User not found');
-        return;
-      }
-
-      if (userId === userData.uid && newRole !== 'admin') {
-        const continueUpdate = await new Promise<boolean>((resolve) => {
+      // Don't allow admins to remove their own admin role
+      if (userId === userData.uid && newRole !== 'Admin') {
+        const confirmed = await new Promise((resolve) => {
           Alert.alert(
             'Warning',
-            'You are about to remove your own admin privileges. This action will remove your ability to manage users and other administrative functions. Are you sure?',
+            'You are about to remove your own admin privileges. This cannot be undone. Are you sure?',
             [
-              {
-                text: 'Cancel',
-                onPress: () => resolve(false),
-                style: 'cancel',
-              },
-              {
-                text: 'Continue',
-                onPress: () => resolve(true),
-                style: 'destructive',
-              },
-            ],
-            { cancelable: false }
+              { text: 'Cancel', onPress: () => resolve(false), style: 'cancel' },
+              { text: 'Continue', onPress: () => resolve(true), style: 'destructive' }
+            ]
           );
         });
 
-        if (!continueUpdate) {
-          return;
+        if (!confirmed) return;
+      }
+
+      // Get the user's current data to check if they're moving from Pending status
+      const userRef = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userRef);
+      const currentUserData = userSnapshot.data();
+      const isPendingToActive = currentUserData?.role === 'Pending' && newRole !== 'Pending';
+
+      // Update the user's role
+      await updateDoc(userRef, {
+        role: newRole,
+        updatedAt: new Date()
+      });
+
+      // If the user was pending and is now being activated, trigger the email notification
+      if (isPendingToActive) {
+        try {
+          // For now, we'll just show an alert that we need to set up Firebase Cloud Functions
+          console.log('User activated:', {
+            userId,
+            email: currentUserData?.email,
+            newRole
+          });
+          Alert.alert(
+            'Note',
+            'Email notification system needs to be set up with Firebase Cloud Functions to send activation emails.'
+          );
+        } catch (error) {
+          console.error('Error sending activation email:', error);
         }
       }
 
-      await updateUserRole(userId, newRole);
       await loadUsers();
       setUsers(prevUsers => 
         prevUsers.map(user => 
@@ -268,12 +278,10 @@ export default function AdminUsersScreen() {
         )
       );
       
-      console.log('Role updated successfully to:', newRole);
       Alert.alert('Success', 'User role updated successfully');
-
     } catch (error: any) {
-      console.error('Role update error:', error);
-      Alert.alert('Error', error.message);
+      console.error('Error updating user role:', error);
+      Alert.alert('Error', error.message || 'Failed to update user role');
     }
   };
 
@@ -334,28 +342,20 @@ export default function AdminUsersScreen() {
         >
           <ThemedView style={styles.modalContent}>
             <ThemedText style={[styles.modalTitle, { marginBottom: 8 }]}>{selectedUser?.name}</ThemedText>
-            {roles.map((role) => (
-              <Pressable
-                key={role}
-                style={[
-                  styles.roleOptionModal,
-                  selectedUser?.role === role && styles.selectedRoleOption,
-                ]}
-                onPress={() => {
-                  if (selectedUser) {
-                    handleUpdateRole(selectedUser.uid, role);
-                    setIsRoleModalVisible(false);
-                  }
-                }}
-              >
-                <ThemedText style={[
-                  styles.roleOptionText,
-                  selectedUser?.role === role && styles.selectedRoleText,
-                ]}>
-                  {role.charAt(0).toUpperCase() + role.slice(1)}
-                </ThemedText>
-              </Pressable>
-            ))}
+            <Picker
+              selectedValue={selectedUser?.role}
+              onValueChange={(value) => {
+                if (selectedUser) {
+                  handleRoleChange(selectedUser.uid, value as UserRole);
+                  setIsRoleModalVisible(false);
+                }
+              }}
+              style={{ width: '100%' }}
+            >
+              {roleOptions.map((role) => (
+                <Picker.Item key={role} label={role} value={role} />
+              ))}
+            </Picker>
           </ThemedView>
         </Modal>
       </SafeAreaView>

@@ -7,9 +7,11 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/context/AuthContext';
 import { handleSignOut } from '@/utils/auth';
-import { getAllPromotions } from '@/services/firebase';
+import { getAllPromotions, getAllProducts, Product } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePermissions } from '@/hooks/usePermissions';
+import React from 'react';
 
 // Promotion types
 interface Promotion {
@@ -29,14 +31,22 @@ interface Promotion {
   updatedAt: Date;
 }
 
+// Remove the useRef wrapper and define the viewability config outside the component
+const viewabilityConfig = {
+  itemVisiblePercentThreshold: 50,
+  minimumViewTime: 100,
+};
+
 export default function HomeScreen() {
   const { userData } = useAuth();
+  const { canManageProducts } = usePermissions();
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef(null);
   const screenWidth = Dimensions.get('window').width;
   const [refreshing, setRefreshing] = useState(false);
   const insets = useSafeAreaInsets();
+  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
 
   const styles = StyleSheet.create({
     container: {
@@ -58,19 +68,24 @@ export default function HomeScreen() {
       flexDirection: 'row',
       alignItems: 'center',
       marginTop: 16,
+      marginBottom: 8,
+      paddingHorizontal: 16,
     },
     carouselContainer: {
       marginVertical: 4,
+      height: 500,
+      width: screenWidth,
+      alignItems: 'center',
     },
     carouselItem: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      padding: 8,
+      width: screenWidth,
+      height: '100%',
+      paddingHorizontal: 16,
+      justifyContent: 'center',
     },
     imageContainer: {
       width: '100%',
-      aspectRatio: 1,
+      height: '100%',
       position: 'relative',
     },
     promoImage: {
@@ -135,6 +150,63 @@ export default function HomeScreen() {
     scrollContainer: {
       flex: 1,
     },
+    lowStockSection: {
+      marginTop: 32,
+      paddingHorizontal: 16,
+      marginBottom: 56,
+    },
+    sectionTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      marginBottom: 8,
+    },
+    lowStockCard: {
+      backgroundColor: Colors.light.background, // Adapted for light and dark mode
+      borderRadius: 16,
+      marginBottom: 12,
+      overflow: 'hidden',
+      elevation: 3,
+      shadowColor: Colors.light.text, // Adapted for light and dark mode
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      borderWidth: 1,
+      borderColor: Colors.dark.border, // Adapted for light and dark mode
+    },
+    lowStockContent: {
+      flexDirection: 'row',
+      padding: 0,
+      alignItems: 'center',
+    },
+    productImage: {
+      width: 100,
+      height: 100,
+      borderRadius: 0,
+      backgroundColor: Colors.light.secondaryBackground, // Adapted for light and dark mode
+    },
+    productDetails: {
+      flex: 1,
+      marginLeft: 16,
+      justifyContent: 'space-between',
+      height: 80,
+    },
+    productName: {
+      fontSize: 20,
+      fontWeight: '700',
+      marginBottom: 4,
+    },
+    stockWarning: {
+      color: Colors.light.error, // Adapted for light and dark mode
+      fontSize: 14,
+      fontWeight: '600',
+      marginTop: 2,
+    },
+    price: {
+      fontSize: 16,
+      color: Colors.light.tint, // This will be dynamically set based on theme
+      fontWeight: '500',
+      marginTop: 4,
+    },
   });
 
   useEffect(() => {
@@ -143,7 +215,11 @@ export default function HomeScreen() {
 
   const loadPromotions = async () => {
     try {
-      const promos = await getAllPromotions() as Promotion[];
+      const [promos, products] = await Promise.all([
+        getAllPromotions() as Promise<Promotion[]>,
+        getAllProducts() as Promise<Product[]>
+      ]);
+      
       if (Array.isArray(promos)) {
         const now = new Date();
         
@@ -170,6 +246,9 @@ export default function HomeScreen() {
         
         setPromotions(activePromos);
       }
+
+      const lowStock = products.filter(product => product.stock < 10);
+      setLowStockProducts(lowStock);
     } catch (error) {
       console.error('Error loading promotions:', error);
       setPromotions([]);
@@ -180,34 +259,38 @@ export default function HomeScreen() {
     if (!item || !item.images || !item.images.length) {
       return null;
     }
-
+  
+    // Add centering logic for single item
+    const isSingleItem = promotions.length === 1;
+    
     return (
-      <ThemedView style={[styles.carouselItem, { width: screenWidth - 32 }]}>
-        {item.images.map((imageUrl, index) => (
-          <Pressable 
-            key={index}
-            onPress={() => router.push(`/product/${item.productId}`)}
-            style={styles.imageContainer}
-          >
-            <Image
-              source={{ uri: imageUrl }}
-              style={styles.promoImage}
-            />
-            <ThemedView style={styles.titleOverlay}>
-              <ThemedText type="title" style={styles.promoTitle}>{item.name}</ThemedText>
-              <ThemedText type="subtitle" style={styles.promoDescription}>{item.description}</ThemedText>
-            </ThemedView>
-          </Pressable>
-        ))}
-      </ThemedView>
+      <Pressable 
+        onPress={() => router.push(`/product/${item.productId}`)}
+        style={[
+          styles.carouselItem,
+          isSingleItem && { width: screenWidth }  // Ensure full width for single item
+        ]}
+      >
+        <ThemedView style={styles.imageContainer}>
+          <Image
+            source={{ uri: item.images[0] }}
+            style={styles.promoImage}
+          />
+          <ThemedView style={styles.titleOverlay}>
+            <ThemedText type="title" style={styles.promoTitle}>{item.name}</ThemedText>
+            <ThemedText type="subtitle" style={styles.promoDescription}>{item.description}</ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </Pressable>
     );
   };
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: any[] }) => {
+  // Define onViewableItemsChanged without useRef
+  const onViewableItemsChanged = ({ viewableItems }: { viewableItems: any[] }) => {
     if (viewableItems.length > 0) {
       setActiveIndex(viewableItems[0].index);
     }
-  }).current;
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -230,12 +313,13 @@ export default function HomeScreen() {
           style={styles.scrollContainer}
           removeClippedSubviews={true}
           scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={['#FB8A13']} // Android
-              tintColor="#FB8A13" // iOS
+              colors={['#FB8A13']}
+              tintColor="#FB8A13"
             />
           }
         >
@@ -259,7 +343,12 @@ export default function HomeScreen() {
                   onScroll={onScroll}
                   scrollEventThrottle={16}
                   showsHorizontalScrollIndicator={false}
-                  viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+                  snapToInterval={screenWidth}
+                  decelerationRate="fast"
+                  viewabilityConfig={viewabilityConfig}
+                  onViewableItemsChanged={onViewableItemsChanged}
+                  contentContainerStyle={promotions.length === 1 ? { flex: 1 } : undefined}
+                  scrollEnabled={promotions.length > 1}
                 />
                 <ThemedView style={styles.pagination}>
                   {promotions.map((_, index) => (
@@ -275,6 +364,43 @@ export default function HomeScreen() {
               </>
             )}
           </ThemedView>
+
+          {canManageProducts() && (
+            <ThemedView style={styles.lowStockSection}>
+              <ThemedText style={styles.sectionTitle}>Running out soon</ThemedText>
+              {lowStockProducts.length === 0 ? (
+                <ThemedText>No products are low in stock</ThemedText>
+              ) : (
+                lowStockProducts.map(product => (
+                  <Pressable
+                    key={product.id}
+                    style={styles.lowStockCard}
+                    onPress={() => router.push(`/product/${product.id}`)}
+                  >
+                    <ThemedView style={styles.lowStockContent}>
+                      {product.images && product.images[0] && (
+                        <Image
+                          source={{ uri: product.images[0] }}
+                          style={styles.productImage}
+                        />
+                      )}
+                      <ThemedView style={styles.productDetails}>
+                        <ThemedView>
+                          <ThemedText style={styles.productName}>{product.name}</ThemedText>
+                          <ThemedText style={styles.stockWarning}>
+                            Only {product.stock} left in stock
+                          </ThemedText>
+                        </ThemedView>
+                        <ThemedText style={styles.price}>
+                          RM{product.price.toFixed(2)}
+                        </ThemedText>
+                      </ThemedView>
+                    </ThemedView>
+                  </Pressable>
+                ))
+              )}
+            </ThemedView>
+          )}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>
