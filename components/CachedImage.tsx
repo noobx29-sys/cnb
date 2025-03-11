@@ -71,7 +71,7 @@ export function CachedImage({ uri, style, placeholder, resizeMode = 'contain' }:
     <Image
       style={style}
       source={{ uri: imagePath || uri }}
-      resizeMode="cover"
+      resizeMode={resizeMode}
     />
   );
 } 

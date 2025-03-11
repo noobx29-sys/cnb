@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { 
   StyleSheet, 
   Image, 
@@ -21,19 +22,21 @@ import {
   Easing,
   PermissionsAndroid,
 } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Product, updateProduct, uploadImage } from '@/services/firebase';
+import { Product, updateProduct, uploadImage, Category as FirebaseCategory, getAllCategories } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
-import { GestureHandlerRootView, PinchGestureHandler, State, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import { GestureHandlerRootView, PinchGestureHandler, State, PanGestureHandler, TapGestureHandler, PinchGestureHandlerGestureEvent, PanGestureHandlerGestureEvent, TapGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import ReAnimated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   useAnimatedGestureHandler,
+  withTiming,
+  runOnJS,
 } from 'react-native-reanimated';
 import { usePermissions } from '@/hooks/usePermissions';
 import * as ImagePicker from 'expo-image-picker';
@@ -49,6 +52,8 @@ import { auth } from '@/services/firebase';
 import { User } from '@/services/firebase';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import Slider from '@react-native-community/slider';
+import * as FileSystem from 'expo-file-system';
 
 const { width, height } = Dimensions.get('window');
 
@@ -111,111 +116,15 @@ export function NetworkStatus() {
   );
 }
 
-const generateProductPDF = async (product: Product, canSeePrice: boolean) => {
-  try {
-    // Function to create image grid HTML
-    const generateImageGrid = (images: string[]) => {
-      return `
-        <div class="image-grid">
-          ${images.map(image => `
-            <div class="image-item">
-              <img src="${image}" class="grid-image" />
-            </div>
-          `).join('')}
-        </div>
-      `;
-    };
-
-    const htmlContent = `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              padding: 20px;
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            .header { 
-              text-align: center; 
-              margin-bottom: 30px;
-              padding-bottom: 20px;
-            }
-            .product-name { 
-              font-size: 28px; 
-              font-weight: bold; 
-              margin-bottom: 10px;
-              color: #333;
-            }
-            .product-details { 
-              margin-top: 20px;
-              padding: 0 20px;
-            }
-            .description { 
-              margin: 15px 0; 
-              line-height: 1.6;
-              color: #444;
-              white-space: pre-wrap;
-              text-align: justify;
-            }
-            .category { 
-              color: #666; 
-              margin-top: 10px;
-              font-style: italic;
-            }
-            .image-grid {
-              display: flex;
-              flex-direction: column;
-              gap: 20px;
-              margin-top: 30px;
-            }
-            .image-item {
-              width: 100%;
-            }
-            .grid-image {
-              width: 100%;
-              height: auto;
-              display: block;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="product-name">${product.name}</div>
-          </div>
-
-          <div class="product-details">
-            <div class="description">${product.description.replace(/\n/g, '<br>')}</div>
-            ${product.category ? `<div class="category">Category: ${product.category}</div>` : ''}
-          </div>
-
-          ${product.images && product.images.length > 0 ? `
-            ${generateImageGrid(product.images)}
-          ` : ''}
-        </body>
-      </html>
-    `;
-
-    const { uri } = await Print.printToFileAsync({
-      html: htmlContent,
-      base64: false
-    });
-    
-    return uri;
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    throw error;
-  }
-};
-
 export default function ProductViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
+  const [categories, setCategories] = useState<FirebaseCategory[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [currentModalImage, setCurrentModalImage] = useState(0);
+  const [isZoomed, setIsZoomed] = useState(false);
   const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const { canManageProducts } = usePermissions();
@@ -224,25 +133,169 @@ export default function ProductViewScreen() {
 
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const lastTranslateX = useSharedValue(0);
+  const lastTranslateY = useSharedValue(0);
+  const doubleTapRef = useRef(null);
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [sliderValue, setSliderValue] = useState(1);
+  const [showZoomControls, setShowZoomControls] = useState(false);
+  const [isGestureActive, setIsGestureActive] = useState(false);
+
+  const lastScale = useSharedValue(1);
+
+  const [zoomedImageIndex, setZoomedImageIndex] = useState<number | null>(null);
 
   const pinchHandler = useAnimatedGestureHandler<PinchGestureHandlerGestureEvent>({
+    onStart: () => {
+      // Store the current scale when the gesture starts
+      lastScale.value = scale.value;
+      runOnJS(setIsGestureActive)(true);
+    },
     onActive: (event) => {
-      scale.value = savedScale.value * event.scale;
+      // Calculate new scale based on the pinch gesture
+      // Add a small threshold for Android to prevent jittery behavior
+      const scaleFactor = Platform.OS === 'android' ? 0.95 * event.scale : event.scale;
+      const newScale = Math.min(Math.max(lastScale.value * scaleFactor, 1), 5); // Limit zoom between 1x and 5x
+      scale.value = newScale;
+      
+      // Update slider value in real-time during pinch
+      runOnJS(setSliderValue)(newScale);
+      
+      // Update isZoomed state when scale changes
+      if (newScale > 1 && !isZoomed) {
+        runOnJS(setIsZoomed)(true);
+        runOnJS(setShowZoomControls)(true);
+        runOnJS(setZoomedImageIndex)(currentModalImage);
+      } else if (newScale <= 1 && isZoomed) {
+        runOnJS(setIsZoomed)(false);
+        runOnJS(setShowZoomControls)(false);
+        runOnJS(setZoomedImageIndex)(null);
+      }
     },
     onEnd: () => {
       savedScale.value = scale.value;
+      runOnJS(setIsGestureActive)(false);
+      // If scale is less than 1, spring back to 1
       if (scale.value < 1) {
-        scale.value = withSpring(1);
+        scale.value = withSpring(1, { damping: Platform.OS === 'android' ? 20 : 15 });
         savedScale.value = 1;
+        runOnJS(setSliderValue)(1);
+      }
+      // If scale is back to 1, reset translation
+      if (scale.value === 1) {
+        translateX.value = withSpring(0, { damping: Platform.OS === 'android' ? 20 : 15 });
+        translateY.value = withSpring(0, { damping: Platform.OS === 'android' ? 20 : 15 });
+        lastTranslateX.value = 0;
+        lastTranslateY.value = 0;
+        runOnJS(setIsZoomed)(false);
+        runOnJS(setShowZoomControls)(false);
       }
     },
   });
 
-  const animatedImageStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const panHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent>({
+    onStart: () => {
+      lastTranslateX.value = translateX.value;
+      lastTranslateY.value = translateY.value;
+      runOnJS(setIsGestureActive)(true);
+    },
+    onActive: (event) => {
+      // Only allow panning when zoomed in
+      if (scale.value > 1) {
+        // Calculate boundaries based on current zoom level
+        const maxTranslateX = (scale.value - 1) * (width / 2);
+        const maxTranslateY = (scale.value - 1) * (height / 2);
+        
+        // Apply translation with boundaries
+        // Add a small dampening factor for Android to make panning smoother
+        const translationFactor = Platform.OS === 'android' ? 0.95 : 1;
+        translateX.value = Math.min(
+          Math.max(lastTranslateX.value + event.translationX * translationFactor, -maxTranslateX), 
+          maxTranslateX
+        );
+        translateY.value = Math.min(
+          Math.max(lastTranslateY.value + event.translationY * translationFactor, -maxTranslateY), 
+          maxTranslateY
+        );
+      }
+    },
+    onEnd: () => {
+      // Save the final translation values
+      lastTranslateX.value = translateX.value;
+      lastTranslateY.value = translateY.value;
+      runOnJS(setIsGestureActive)(false);
+      
+      // If scale is back to 1, reset translation
+      if (scale.value === 1) {
+        translateX.value = withSpring(0, { damping: Platform.OS === 'android' ? 20 : 15 });
+        translateY.value = withSpring(0, { damping: Platform.OS === 'android' ? 20 : 15 });
+        lastTranslateX.value = 0;
+        lastTranslateY.value = 0;
+      }
+    },
+  });
+
+  const doubleTapHandler = useAnimatedGestureHandler<TapGestureHandlerGestureEvent>({
+    onActive: (event) => {
+      if (scale.value > 1) {
+        // If already zoomed in, zoom out
+        scale.value = withTiming(1, { duration: Platform.OS === 'android' ? 250 : 300 });
+        savedScale.value = 1;
+        translateX.value = withTiming(0, { duration: Platform.OS === 'android' ? 250 : 300 });
+        translateY.value = withTiming(0, { duration: Platform.OS === 'android' ? 250 : 300 });
+        lastTranslateX.value = 0;
+        lastTranslateY.value = 0;
+        runOnJS(setIsZoomed)(false);
+        runOnJS(setShowZoomControls)(false);
+        runOnJS(setSliderValue)(1);
+        runOnJS(setZoomedImageIndex)(null);
+      } else {
+        // If zoomed out, zoom in to 2x at the tap location
+        const targetScale = 2;
+        
+        // Calculate the focal point for zooming
+        // This centers the zoom on the tap location
+        const tapX = event.x;
+        const tapY = event.y;
+        
+        // Calculate the center of the image
+        const centerX = width / 2;
+        const centerY = height / 2;
+        
+        // Calculate the offset from center
+        const offsetX = (tapX - centerX) * (1 - targetScale);
+        const offsetY = (tapY - centerY) * (1 - targetScale);
+        
+        // Apply the zoom and translation
+        scale.value = withTiming(targetScale, { duration: Platform.OS === 'android' ? 250 : 300 });
+        savedScale.value = targetScale;
+        translateX.value = withTiming(offsetX, { duration: Platform.OS === 'android' ? 250 : 300 });
+        translateY.value = withTiming(offsetY, { duration: Platform.OS === 'android' ? 250 : 300 });
+        lastTranslateX.value = offsetX;
+        lastTranslateY.value = offsetY;
+        
+        runOnJS(setIsZoomed)(true);
+        runOnJS(setShowZoomControls)(true);
+        runOnJS(setSliderValue)(targetScale);
+        runOnJS(setZoomedImageIndex)(currentModalImage);
+      }
+    },
+  });
+
+  const animatedImageStyle = useAnimatedStyle(() => {
+    return {
+      width: '100%',
+      height: '100%',
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value }
+      ],
+    };
+  });
 
   const [isFabOpen, setIsFabOpen] = useState(false);
 
@@ -301,6 +354,77 @@ export default function ProductViewScreen() {
   }, []);
 
   useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const fetchedCategories = await getAllCategories();
+        console.log('Loaded categories:', fetchedCategories);
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    };
+    
+    loadCategories();
+  }, []);
+
+  // Function to find category name by ID
+  const getCategoryNameById = (categoryId: string | null): string => {
+    if (!categoryId) return '';
+    
+    console.log('Finding category name for ID:', categoryId);
+    // Find the category with matching ID
+    const category = categories.find(cat => cat.id === categoryId);
+    const result = category ? category.name : categoryId;
+    console.log('Found category name:', result);
+    return result;
+  };
+  
+  // Function to find subcategory name by ID
+  const getSubcategoryNameById = (categoryId: string | null, subcategoryId: string | null): string => {
+    if (!categoryId || !subcategoryId) return '';
+    
+    console.log('Finding subcategory name for category ID:', categoryId, 'subcategory ID:', subcategoryId);
+    // Find the category
+    const category = categories.find(cat => cat.id === categoryId);
+    if (!category || !category.subCategories) {
+      console.log('Category not found or has no subcategories, returning ID:', subcategoryId);
+      return subcategoryId;
+    }
+    
+    // Find the subcategory
+    const subcategory = category.subCategories.find(sub => sub.id === subcategoryId);
+    const result = subcategory ? subcategory.name : subcategoryId;
+    console.log('Found subcategory name:', result);
+    return result;
+  };
+  
+  // Function to find subsubcategory name by ID
+  const getSubsubcategoryNameById = (categoryId: string | null, subcategoryId: string | null, subsubcategoryId: string | null): string => {
+    if (!categoryId || !subcategoryId || !subsubcategoryId) return '';
+    
+    console.log('Finding subsubcategory name for category ID:', categoryId, 'subcategory ID:', subcategoryId, 'subsubcategory ID:', subsubcategoryId);
+    // Find the category
+    const category = categories.find(cat => cat.id === categoryId);
+    if (!category || !category.subCategories) {
+      console.log('Category not found or has no subcategories, returning ID:', subsubcategoryId);
+      return subsubcategoryId;
+    }
+    
+    // Find the subcategory
+    const subcategory = category.subCategories.find(sub => sub.id === subcategoryId);
+    if (!subcategory || !subcategory.subCategories) {
+      console.log('Subcategory not found or has no subsubcategories, returning ID:', subsubcategoryId);
+      return subsubcategoryId;
+    }
+    
+    // Find the subsubcategory
+    const subsubcategory = subcategory.subCategories.find(subsub => subsub.id === subsubcategoryId);
+    const result = subsubcategory ? subsubcategory.name : subsubcategoryId;
+    console.log('Found subsubcategory name:', result);
+    return result;
+  };
+
+  useEffect(() => {
     const loadProduct = async () => {
       try {
         const products = await getAllProducts();
@@ -337,8 +461,9 @@ export default function ProductViewScreen() {
     },
     image: {
       width: isDesktop() ? getCarouselWidth() : width,
-      height: isDesktop() ? getCarouselWidth() : width,
+      height: isDesktop() ? getCarouselWidth() * 0.75 : width * 0.75,
       alignSelf: 'center',
+      resizeMode: 'contain',
     },
     pagination: {
       flexDirection: 'row',
@@ -359,6 +484,7 @@ export default function ProductViewScreen() {
     content: {
       padding: 16,
       gap: 12,
+      paddingHorizontal: 0,
     },
     name: {
       fontSize: 24,
@@ -384,20 +510,21 @@ export default function ProductViewScreen() {
     modalContainer: {
       flex: 1,
       backgroundColor: 'black',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     modalImageContainer: {
       width: width,
       height: height,
       justifyContent: 'center',
       alignItems: 'center',
+      padding: 10,
     },
     modalImage: {
-      maxWidth: width,
-      maxHeight: height,
       width: '100%',
-      height: undefined,
-      aspectRatio: 1,
+      height: '100%',
       resizeMode: 'contain',
+      backgroundColor: 'transparent', // Ensure background is transparent
     },
     modalHeader: {
       position: 'absolute',
@@ -434,6 +561,12 @@ export default function ProductViewScreen() {
       color: 'white',
       fontSize: 16,
     },
+    zoomInstructions: {
+      color: 'rgba(255, 255, 255, 0.8)',
+      fontSize: 12,
+      marginTop: 8,
+      textAlign: 'center',
+    },
     closeButton: {
       position: 'absolute',
       top: insets.top,
@@ -443,8 +576,8 @@ export default function ProductViewScreen() {
     },
     shareButton: {
       position: 'absolute',
-      top: insets.top,
-      right: 20,
+      top: 16,
+      right: 16,
       zIndex: 1,
       padding: 10,
       shadowColor: '#000',
@@ -474,6 +607,7 @@ export default function ProductViewScreen() {
       height: '100%',
       justifyContent: 'center',
       alignItems: 'center',
+      overflow: 'visible', // Allow content to expand beyond boundaries
     },
     navigationButton: {
       position: 'absolute',
@@ -509,27 +643,33 @@ export default function ProductViewScreen() {
     },
     imageGrid: {
       flexDirection: 'column',
-      gap: 8,
       marginTop: 16,
       width: '100%',
+      paddingHorizontal: 0,
     },
     gridImageContainer: {
       width: '100%',
+      height: undefined,
       aspectRatio: 1,
-      marginBottom: 8,
+      marginBottom: 4,
+      overflow: 'hidden',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     gridImage: {
       width: '100%',
-      height: '100%',
+      height: undefined,
+      aspectRatio: 1,
       borderRadius: 0,
+      resizeMode: 'contain',
     },
     activeGridImage: {
       // Remove border styles completely
     },
     backButton: {
       position: 'absolute',
-      top: insets.top,
-      left: 20,
+      top: 16,
+      left: 16,
       zIndex: 1,
       padding: 10,
       shadowColor: '#000',
@@ -586,7 +726,184 @@ export default function ProductViewScreen() {
       color: '#666',
       marginTop: 16,
     },
+    categoryContainer: {
+      marginVertical: 4,
+      marginHorizontal: 10,
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(251, 138, 19, 0.05)',
+      padding: 10,
+      borderRadius: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: '#FB8A13',
+    },
+    categoryLabel: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginBottom: 5,
+    },
+    categoryPath: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      paddingHorizontal: 5,
+    },
+    categoryItemContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    categoryItem: {
+      fontSize: 16,
+      color: '#FB8A13',
+      marginHorizontal: 2,
+    },
+    zoomSliderContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      width: '100%',
+      marginTop: 8,
+      justifyContent: 'space-between',
+      paddingHorizontal: Platform.OS === 'android' ? 10 : 0, // Add padding on Android
+    },
+    zoomSlider: {
+      flex: 1,
+      height: Platform.OS === 'android' ? 40 : 40,
+      marginHorizontal: 10,
+      ...(Platform.OS === 'android' && {
+        // Android-specific slider styles
+        marginVertical: 8,
+      }),
+    },
+    resetZoomButton: {
+      padding: 8,
+      ...(Platform.OS === 'android' && {
+        // Android-specific button styles
+        padding: 12, // Larger touch target on Android
+      }),
+    },
+    zoomIndicator: {
+      position: 'absolute',
+      top: '50%',
+      alignSelf: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+      borderRadius: 20,
+      padding: Platform.OS === 'android' ? 12 : 10,
+      zIndex: 10,
+      ...(Platform.OS === 'android' && {
+        // Android-specific indicator styles
+        elevation: 5,
+      }),
+    },
+    zoomIndicatorText: {
+      color: 'white',
+      fontSize: Platform.OS === 'android' ? 18 : 16, // Larger text on Android
+      fontWeight: 'bold',
+    },
+    zoomControlsHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      ...(Platform.OS === 'android' && {
+        // Android-specific header styles
+        paddingVertical: 5,
+      }),
+    },
+    zoomModeText: {
+      color: '#FB8A13',
+      fontWeight: 'bold',
+      marginRight: 10,
+    },
   });
+
+  const generateProductPDF = async (product: Product, canSeePrice: boolean) => {
+    try {
+      // Function to create individual image pages
+      const generateImagePages = (images: string[]) => {
+        return images.map(image => `
+          <div class="image-page">
+            <div class="image-container">
+              <img src="${image}" class="page-image" />
+            </div>
+          </div>
+        `).join('');
+      };
+  
+      // Get category names
+      const categoryName = getCategoryNameById(product.category);
+      const subcategoryName = product.subcategory ? getSubcategoryNameById(product.category, product.subcategory) : '';
+      const subsubcategoryName = product.subsubcategory ? getSubsubcategoryNameById(product.category, product.subcategory, product.subsubcategory) : '';
+  
+      const htmlContent = `
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                padding: 0;
+                margin: 0;
+              }
+              .image-page { 
+                page-break-after: always;
+                height: 100vh;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 10px;
+                box-sizing: border-box;
+              }
+              .image-container {
+                width: 100%;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .page-image {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+              }
+              /* Ensure the last page doesn't have a page break after it */
+              .image-page:last-child {
+                page-break-after: auto;
+              }
+            </style>
+          </head>
+          <body>
+            ${product.images && product.images.length > 0 ? 
+              generateImagePages(product.images) : ''}
+          </body>
+        </html>
+      `;
+  
+      // Generate the PDF with default name
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false
+      });
+      
+      // Create a sanitized product name for the filename
+      const sanitizedName = product.name 
+        ? product.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50) 
+        : 'product_details';
+      
+      // Get the directory and create a new filename with the product name
+      const directory = uri.substring(0, uri.lastIndexOf('/') + 1);
+      const newUri = `${directory}${sanitizedName}.pdf`;
+      
+      // Rename the file
+      await FileSystem.moveAsync({
+        from: uri,
+        to: newUri
+      });
+      
+      return newUri;
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      throw error;
+    }
+  };
 
   const handleShare = async () => {
     try {
@@ -605,7 +922,7 @@ export default function ProductViewScreen() {
         // Share the PDF file
         await Sharing.shareAsync(pdfUri, {
           mimeType: 'application/pdf',
-          dialogTitle: `${product.name} Details`,
+          dialogTitle: `${product.name} - Product Catalog`,
           UTI: 'com.adobe.pdf' // for iOS
         });
       } else {
@@ -619,28 +936,69 @@ export default function ProductViewScreen() {
     }
   };
 
-  useEffect(() => {
-    const loadProduct = async () => {
-      const products = await getAllProducts();
-      const foundProduct = products.find((p: Product) => p.id === id);
-      if (foundProduct) {
-        setProduct(foundProduct);
+  const handleSliderChange = (value: number) => {
+    // Update the slider value state
+    setSliderValue(value);
+    
+    // Update the animated values with proper animations for Android
+    if (Platform.OS === 'android') {
+      // Use timing animation for smoother transitions on Android
+      scale.value = withTiming(value, { duration: 100 });
+      savedScale.value = value;
+    } else {
+      // Direct update for iOS (already smooth)
+      scale.value = value;
+      savedScale.value = value;
+    }
+    
+    // Update isZoomed state based on scale value
+    if (value > 1 && !isZoomed) {
+      setIsZoomed(true);
+      setZoomedImageIndex(currentModalImage);
+    } else if (value <= 1 && isZoomed) {
+      setIsZoomed(false);
+      setZoomedImageIndex(null);
+      // Reset translation when zooming out completely
+      if (Platform.OS === 'android') {
+        translateX.value = withTiming(0, { duration: 100 });
+        translateY.value = withTiming(0, { duration: 100 });
+      } else {
+        translateX.value = 0;
+        translateY.value = 0;
       }
-    };
-    loadProduct();
-  }, [id]);
+      lastTranslateX.value = 0;
+      lastTranslateY.value = 0;
+    }
+  };
+
+  const resetZoom = () => {
+    if (Platform.OS === 'android') {
+      scale.value = withTiming(1, { duration: 150 });
+      translateX.value = withTiming(0, { duration: 150 });
+      translateY.value = withTiming(0, { duration: 150 });
+    } else {
+      scale.value = 1;
+      translateX.value = 0;
+      translateY.value = 0;
+    }
+    savedScale.value = 1;
+    lastTranslateX.value = 0;
+    lastTranslateY.value = 0;
+    setIsZoomed(false);
+    setShowZoomControls(false);
+    setSliderValue(1);
+    setZoomedImageIndex(null);
+  };
 
   const openModal = (index: number) => {
     // Reset scale values when opening modal
-    scale.value = 1;
-    savedScale.value = 1;
+    resetZoom();
     setSelectedImageIndex(index);
     setModalVisible(true);
   };
 
   const closeModal = () => {
-    scale.value = 1;
-    savedScale.value = 1;
+    resetZoom();
     setModalVisible(false);
   };
 
@@ -756,6 +1114,7 @@ export default function ProductViewScreen() {
                     <CachedImage
                       uri={image}
                       style={styles.image}
+                      resizeMode="contain"
                       placeholder={
                         <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
                           <ThemedText>Loading...</ThemedText>
@@ -783,18 +1142,18 @@ export default function ProductViewScreen() {
             </View>
 
             <ThemedView style={styles.content}>
-              <ThemedText type="title" style={styles.name}>
+              <ThemedText type="title" style={[styles.name, { paddingHorizontal: 16 }]}>
                 {product.name}
               </ThemedText>
-              <ThemedText style={styles.description}>
+              <ThemedText style={[styles.description, { paddingHorizontal: 16 }]}>
                 {product.description}
               </ThemedText>
               {!canSeePrice() ? (
-                <ThemedText style={styles.contactMessage}>
+                <ThemedText style={[styles.contactMessage, { paddingHorizontal: 16 }]}>
                 Please contact us for pricing information
                 </ThemedText>
               ) : ( 
-                <ThemedText style={styles.price}>
+                <ThemedText style={[styles.price, { paddingHorizontal: 16 }]}>
                 RM{product.price.toFixed(2)}
               </ThemedText>
               )}
@@ -802,14 +1161,35 @@ export default function ProductViewScreen() {
                 Stock: {product.stock}
               </ThemedText> */}
               {product.category && (
-                <ThemedText style={styles.category}>
-                  Category: {product.category}
-                </ThemedText>
+                <View style={[styles.categoryContainer, { paddingHorizontal: 16 }]}>
+                  <ThemedText style={styles.categoryLabel}>Category:</ThemedText>
+                  <View style={styles.categoryPath}>
+                    <View style={styles.categoryItemContainer}>
+                      <ThemedText style={styles.categoryItem}>{getCategoryNameById(product.category)}</ThemedText>
+                    </View>
+                    {product.subcategory && (
+                      <>
+                        <Ionicons name="chevron-forward" size={16} color={colorScheme === 'dark' ? '#ccc' : '#666'} />
+                        <View style={styles.categoryItemContainer}>
+                          <ThemedText style={styles.categoryItem}>{getSubcategoryNameById(product.category, product.subcategory)}</ThemedText>
+                        </View>
+                      </>
+                    )}
+                    {product.subsubcategory && (
+                      <>
+                        <Ionicons name="chevron-forward" size={16} color={colorScheme === 'dark' ? '#ccc' : '#666'} />
+                        <View style={styles.categoryItemContainer}>
+                          <ThemedText style={styles.categoryItem}>{getSubsubcategoryNameById(product.category, product.subcategory, product.subsubcategory)}</ThemedText>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </View>
               )}
 
               {/* Add Image Grid for all images */}
               <View style={styles.imageGrid}>
-                <ThemedText style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold' }}>
+                <ThemedText style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold', paddingHorizontal: 16 }}>
                   All Images
                 </ThemedText>
                 {product?.images?.map((image, index) => (
@@ -824,8 +1204,9 @@ export default function ProductViewScreen() {
                         styles.gridImage,
                         activeImageIndex === index && styles.activeGridImage
                       ]}
+                      resizeMode="contain"
                       placeholder={
-                        <View style={[styles.gridImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                        <View style={[styles.gridImage, { justifyContent: 'center', alignItems: 'center' }]}>
                           <ActivityIndicator size="small" color="#FB8A13" />
                         </View>
                       }
@@ -850,54 +1231,124 @@ export default function ProductViewScreen() {
             <TouchableOpacity onPress={closeModal}>
               <Ionicons name="close" size={28} color="white" />
             </TouchableOpacity>
+            {showZoomControls && (
+              <View style={styles.zoomControlsHeader}>
+                <Text style={styles.zoomModeText}>Zoom Mode</Text>
+                <TouchableOpacity onPress={resetZoom} style={styles.resetZoomButton}>
+                  <Ionicons name="refresh" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
+
+          {isGestureActive && (
+            <View style={styles.zoomIndicator}>
+              <Text style={styles.zoomIndicatorText}>{Math.round(sliderValue * 100)}%</Text>
+            </View>
+          )}
 
           <FlatList
             ref={flatListRef}
-            data={product?.images}
+            data={isZoomed ? [product?.images?.[zoomedImageIndex!]] : product?.images}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            initialScrollIndex={selectedImageIndex}
+            initialScrollIndex={isZoomed ? 0 : selectedImageIndex}
+            scrollEnabled={!isZoomed}
             onScrollToIndexFailed={(info) => {
               setTimeout(() => {
                 flatListRef.current?.scrollToIndex({ 
-                  index: selectedImageIndex, 
+                  index: isZoomed ? 0 : selectedImageIndex, 
                   animated: false 
                 });
               }, 100);
             }}
             onMomentumScrollEnd={(e) => {
-              const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
-              setCurrentModalImage(newIndex);
+              if (!isZoomed) {
+                const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+                setCurrentModalImage(newIndex);
+                // Reset zoom when changing images
+                resetZoom();
+              }
             }}
             getItemLayout={(_, index) => ({
               length: width,
               offset: width * index,
               index,
             })}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <View style={styles.modalImageContainer}>
-                <PinchGestureHandler onGestureEvent={pinchHandler}>
-                  <ReAnimated.View>
-                    <CachedImage
-                      uri={item}
-                      style={[styles.modalImage, animatedImageStyle]}
-                      placeholder={
-                        <ActivityIndicator size="large" color="#FB8A13" />
-                      }
-                    />
+                <TapGestureHandler
+                  ref={doubleTapRef}
+                  numberOfTaps={2}
+                  onGestureEvent={doubleTapHandler}
+                >
+                  <ReAnimated.View style={styles.zoomableImage}>
+                    <PanGestureHandler onGestureEvent={panHandler}>
+                      <ReAnimated.View style={styles.zoomableImage}>
+                        <PinchGestureHandler onGestureEvent={pinchHandler}>
+                          <ReAnimated.View style={[styles.zoomableImage, animatedImageStyle]}>
+                            <Image
+                              source={{ uri: item }}
+                              style={styles.modalImage}
+                              resizeMode="contain"
+                            />
+                          </ReAnimated.View>
+                        </PinchGestureHandler>
+                      </ReAnimated.View>
+                    </PanGestureHandler>
                   </ReAnimated.View>
-                </PinchGestureHandler>
+                </TapGestureHandler>
               </View>
             )}
-            keyExtractor={(_, index) => index.toString()}
+            keyExtractor={(_, index) => `modal-image-${index}`}
           />
 
           <View style={styles.modalFooter}>
             <Text style={styles.imageCounter}>
-              {currentModalImage + 1} / {product?.images?.length}
+              {isZoomed 
+                ? `Zoomed: ${zoomedImageIndex! + 1} / ${product?.images?.length}`
+                : `${currentModalImage + 1} / ${product?.images?.length}`
+              }
             </Text>
+            
+            {showZoomControls ? (
+              <View style={styles.zoomSliderContainer}>
+                <TouchableOpacity 
+                  onPress={() => handleSliderChange(Math.max(1, sliderValue - 0.5))}
+                  hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                >
+                  <Ionicons name="remove-circle-outline" size={24} color="white" />
+                </TouchableOpacity>
+                
+                <Slider
+                  style={[
+                    styles.zoomSlider,
+                    Platform.OS === 'android' && { height: 40 } // Increase touch area on Android
+                  ]}
+                  minimumValue={1}
+                  maximumValue={5}
+                  step={Platform.OS === 'android' ? 0.2 : 0.1} // Larger steps on Android for better performance
+                  value={sliderValue}
+                  onValueChange={handleSliderChange}
+                  minimumTrackTintColor="#FB8A13"
+                  maximumTrackTintColor="#FFFFFF"
+                  thumbTintColor="#FB8A13"
+                  tapToSeek={Platform.OS === 'android'} // Enable tap-to-seek on Android
+                />
+                
+                <TouchableOpacity 
+                  onPress={() => handleSliderChange(Math.min(5, sliderValue + 0.5))}
+                  hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                >
+                  <Ionicons name="add-circle-outline" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.zoomInstructions}>
+                Pinch to zoom • Double tap to zoom in/out • Drag to move when zoomed
+              </Text>
+            )}
           </View>
         </View>
       </Modal>

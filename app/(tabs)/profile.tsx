@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/context/AuthContext';
-import { handleSignOut } from '@/utils/auth';
+import { handleSignOut, handleDeleteAccount } from '@/utils/auth';
 import { UserData } from '@/services/firebase';
 import { verifyUserRole } from '@/services/firebase';
 import { useColorScheme } from '@/context/ColorSchemeContext';
@@ -77,6 +77,13 @@ export default function ProfileScreen() {
       alignItems: 'center',
       marginTop: 12,
     },
+    deleteAccountButton: {
+      backgroundColor: '#8B0000',
+      padding: 12,
+      borderRadius: 8,
+      alignItems: 'center',
+      marginTop: 12,
+    },
     buttonText: {
       color: '#FFFFFF',
       fontSize: 16,
@@ -88,6 +95,29 @@ export default function ProfileScreen() {
     },
   });
   
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await handleDeleteAccount();
+            if (success) {
+              // The auth context will handle the redirect
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   if (!userData) {
     return (
@@ -149,6 +179,12 @@ export default function ProfileScreen() {
               <ThemedText style={styles.buttonText}>Sign Out</ThemedText>
             </Pressable>
             
+            <Pressable 
+              style={styles.deleteAccountButton}
+              onPress={confirmDeleteAccount}
+            >
+              <ThemedText style={styles.buttonText}>Delete Account</ThemedText>
+            </Pressable>
           </ThemedView>
         </ScrollView>
       </SafeAreaView>

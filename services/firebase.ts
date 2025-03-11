@@ -70,16 +70,20 @@ export interface Category {
   subCategories: Array<{
     id: string;
     name: string;
+    order?: number;
     subCategories?: Array<{
       id: string;
       name: string;
+      order?: number;
       subCategories?: Array<{
         id: string;
         name: string;
+        order?: number;
       }>;
     }>;
   }>;
   createdAt: Date;
+  order?: number;
 }
 
 // Promotion types
@@ -222,7 +226,7 @@ export async function getAllProducts() {
 }
 
 // Category functions
-export const createCategory = async (name: string, parentCategoryId?: string, parentSubcategoryId?: string) => {
+export const createCategory = async (name: string, parentCategoryId?: string, parentSubcategoryId?: string, order?: number) => {
   try {
     if (!parentCategoryId) {
       // Creating main category
@@ -230,6 +234,7 @@ export const createCategory = async (name: string, parentCategoryId?: string, pa
         name,
         subCategories: [],
         createdAt: new Date(),
+        order: order !== undefined ? order : 0,
       };
       const docRef = await addDoc(collection(db, 'categories'), newCategory);
       return docRef.id;
@@ -244,7 +249,8 @@ export const createCategory = async (name: string, parentCategoryId?: string, pa
       const newSubCategory = {
         id: Date.now().toString(),
         name,
-        subCategories: []
+        subCategories: [],
+        order: order !== undefined ? order : category.subCategories.length,
       };
       await updateDoc(categoryRef, {
         subCategories: arrayUnion(newSubCategory)
@@ -255,14 +261,16 @@ export const createCategory = async (name: string, parentCategoryId?: string, pa
     // Find the parent subcategory
     const updatedSubCategories = category.subCategories.map(subCat => {
       if (subCat.id === parentSubcategoryId) {
+        const subSubCategories = subCat.subCategories || [];
         return {
           ...subCat,
           subCategories: [
-            ...(subCat.subCategories || []),
+            ...subSubCategories,
             {
               id: Date.now().toString(),
               name,
-              subCategories: []
+              subCategories: [],
+              order: order !== undefined ? order : subSubCategories.length,
             }
           ]
         };
@@ -399,6 +407,7 @@ export const getAllCategories = async () => {
         name: data.name,
         subCategories: data.subCategories || [],
         createdAt: data.createdAt?.toDate() || new Date(),
+        order: data.order !== undefined ? data.order : 0,
       };
     });
     console.log('Processed categories:', categories);

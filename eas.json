@@ -20,6 +20,43 @@
         "EXPO_USE_CUSTOM_ANDROID_SETTINGS": "true",
         "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
       }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle",
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
+      },
+      "ios": {
+        "image": "latest",
+        "resourceClass": "m-medium"
+      }
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
+      },
+      "ios": {
+        "simulator": true
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascApiKeyIssuerId": "f269784b-e8f5-4638-bb4f-42b561cf7ae1",
+        "ascApiKeyId": "JOX7BZAUGVMK",
+        "ascApiKeyPath": "./credentials/ios/AuthKey.p8",
+        "appleTeamId": "4W9658Z948",
+        "ascAppId": "6743068002"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credentials/android/service-account.json",
+        "track": "production"
+      }
     }
   }
 }

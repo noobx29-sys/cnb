@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Pressable, Image, ActivityIndicator, ScrollView, SafeAreaView, RefreshControl, TextInput, useColorScheme, Platform, View, Dimensions } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { StyleSheet, Pressable, Image, ActivityIndicator, ScrollView, SafeAreaView, RefreshControl, TextInput, useColorScheme, Platform, View, Dimensions, Modal, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { StatusBar } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
@@ -10,13 +10,16 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProductGridWidth, getContentWidth } from '@/utils/responsive';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface SubCategory {
   id: string;
   name: string;
+  order?: number;
   subCategories?: Array<{
     id: string;
     name: string;
+    order?: number;
   }>;
 }
 
@@ -27,6 +30,7 @@ interface Category {
   path: string[];
   subCategories: SubCategory[];
   createdAt: Date;
+  order?: number;
 }
 
 export default function ProductScreen() {
@@ -39,7 +43,8 @@ export default function ProductScreen() {
       parentId: null,
       path: [],
       subCategories: [],
-      createdAt: new Date()
+      createdAt: new Date(),
+      order: -1
     }
   ]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +57,34 @@ export default function ProductScreen() {
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubSubCategory, setSelectedSubSubCategory] = useState<string | null>(null);
   const router = useRouter();
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeLevel, setActiveLevel] = useState<'main' | 'sub' | 'subsub'>('main');
+  const [tempSelectedCategory, setTempSelectedCategory] = useState<string | null>(null);
+  const [tempSelectedSubCategory, setTempSelectedSubCategory] = useState<string | null>(null);
+  const [tempSelectedSubSubCategory, setTempSelectedSubSubCategory] = useState<string | null>(null);
+
+  // Function to get category/subcategory/subsubcategory name from ID
+  const getCategoryNameById = (categoryId: string | null): string => {
+    if (!categoryId) return '';
+    
+    // Check if it's a main category
+    const mainCategory = categories.find(cat => cat.id === categoryId);
+    if (mainCategory) return mainCategory.name;
+    
+    // Check if it's a subcategory
+    for (const category of categories) {
+      const subCategory = category.subCategories?.find(sub => sub.id === categoryId);
+      if (subCategory) return subCategory.name;
+      
+      // Check if it's a sub-subcategory
+      for (const subCat of category.subCategories || []) {
+        const subSubCategory = subCat.subCategories?.find(subSub => subSub.id === categoryId);
+        if (subSubCategory) return subSubCategory.name;
+      }
+    }
+    
+    return categoryId; // Return the ID if name not found
+  };
 
   const styles = StyleSheet.create({
     container: {
@@ -133,14 +166,151 @@ export default function ProductScreen() {
       padding: 8,
       width: '100%',
       marginTop: Platform.OS === 'android' ? 8 : 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      ...(Platform.OS === 'ios' ? {
+        shadowColor: colorScheme === 'dark' ? 'transparent' : '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: colorScheme === 'dark' ? 0 : 0.1,
+        shadowRadius: 2,
+      } : {
+        elevation: colorScheme === 'dark' ? 0 : 2,
+      }),
     },
     searchInput: {
-      color: '#999999',
+      color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
       height: 48,
       borderWidth: 1,
       borderRadius: 8,
       paddingHorizontal: 16,
       fontSize: 16,
+      flex: 1,
+      borderColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+      backgroundColor: colorScheme === 'dark' ? Colors.dark.secondaryBackground : Colors.light.secondaryBackground,
+      ...(Platform.OS === 'ios' ? {
+        shadowColor: colorScheme === 'dark' ? 'transparent' : '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: colorScheme === 'dark' ? 0 : 0.1,
+        shadowRadius: 2,
+      } : {
+        elevation: colorScheme === 'dark' ? 0 : 2,
+      }),
+    },
+    filterButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 8,
+      marginLeft: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colorScheme === 'dark' ? Colors.dark.secondaryBackground : Colors.light.secondaryBackground,
+      borderWidth: 1,
+      borderColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+      ...(Platform.OS === 'ios' ? {
+        shadowColor: colorScheme === 'dark' ? 'transparent' : '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: colorScheme === 'dark' ? 0 : 0.1,
+        shadowRadius: 2,
+      } : {
+        elevation: colorScheme === 'dark' ? 0 : 2,
+      }),
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContainer: {
+      width: '90%',
+      maxHeight: '80%',
+      borderRadius: 12,
+      overflow: 'hidden',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+    },
+    modalContent: {
+      padding: 16,
+    },
+    categoryItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    categoryItemText: {
+      fontSize: 16,
+    },
+    selectedCategoryItem: {
+      backgroundColor: colorScheme === 'dark' ? 'rgba(251, 138, 19, 0.2)' : 'rgba(251, 138, 19, 0.1)',
+    },
+    selectedCategoryItemText: {
+      color: Colors.light.tint,
+      fontWeight: 'bold',
+    },
+    modalFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    modalButton: {
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    applyButton: {
+      backgroundColor: Colors.light.tint,
+    },
+    cancelButton: {
+      backgroundColor: colorScheme === 'dark' ? Colors.dark.secondaryBackground : Colors.light.secondaryBackground,
+      borderWidth: 1,
+      borderColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    buttonText: {
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    applyButtonText: {
+      color: '#FFFFFF',
+    },
+    cancelButtonText: {
+      color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
+    },
+    breadcrumb: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    breadcrumbItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    breadcrumbText: {
+      fontSize: 14,
+      color: Colors.light.tint,
+    },
+    breadcrumbSeparator: {
+      marginHorizontal: 8,
+      color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
     },
     skeletonCard: {
       width: '48%',
@@ -210,14 +380,13 @@ export default function ProductScreen() {
       paddingHorizontal: 12,
       paddingVertical: 4,
       borderRadius: 12,
-      backgroundColor: 'rgba(32, 34, 35, 0.8)',
+      backgroundColor: 'rgba(32, 34, 35, 0.9)',
       marginHorizontal: 4,
       borderWidth: 1,
-      borderStyle: 'dashed',
-      borderColor: 'rgba(64, 66, 67, 0.4)',
+      borderColor: 'rgba(64, 66, 67, 0.5)',
     },
     selectedSubSubCategory: {
-      backgroundColor: 'transparent',
+      backgroundColor: Colors.light.tint,
       borderColor: Colors.light.tint,
     },
     subSubCategoryName: {
@@ -226,14 +395,21 @@ export default function ProductScreen() {
       opacity: 0.95,
     },
     selectedSubSubCategoryText: {
-      color: Colors.light.tint,
-      fontWeight: '500',
+      color: '#FFFFFF',
+      fontWeight: '600',
       opacity: 1,
     },
     contactMessage: {
       fontSize: 14,
       color: Colors.light.tint,
       fontWeight: 'bold',
+      padding: 8,
+      paddingTop: 0,
+    },
+    categoryLabel: {
+      fontSize: 12,
+      color: Colors.light.text,
+      opacity: 0.7,
       padding: 8,
       paddingTop: 0,
     },
@@ -251,15 +427,19 @@ export default function ProductScreen() {
         getAllCategories()
       ]);
       
-      // Transform fetched categories to match local Category interface
-      const transformedCategories = fetchedCategories.map(cat => ({
+      // Transform fetched categories to match local Category interface and add order property
+      const transformedCategories = fetchedCategories.map((cat: any, index: number) => ({
         id: cat.id,
         name: cat.name,
         parentId: null,
         path: [],
         subCategories: cat.subCategories || [],
-        createdAt: cat.createdAt
+        createdAt: cat.createdAt,
+        order: cat.order !== undefined ? cat.order : index // Use order if available, otherwise use index
       }));
+      
+      // Sort categories by order
+      const sortedCategories = transformedCategories.sort((a, b) => (a.order || 0) - (b.order || 0));
       
       setAllProducts(products);
       setCategories([
@@ -269,9 +449,10 @@ export default function ProductScreen() {
           parentId: null,
           path: [],
           subCategories: [],
-          createdAt: new Date()
+          createdAt: new Date(),
+          order: -1
         },
-        ...transformedCategories
+        ...sortedCategories
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -281,6 +462,17 @@ export default function ProductScreen() {
   };
 
   const getFilteredProducts = () => {
+    // Debug logging
+    if (selectedCategory && selectedCategory !== 'all') {
+      console.log('Filtering by category ID:', selectedCategory);
+      if (selectedSubCategory) {
+        console.log('Filtering by subcategory ID:', selectedSubCategory);
+        if (selectedSubSubCategory) {
+          console.log('Filtering by subsubcategory ID:', selectedSubSubCategory);
+        }
+      }
+    }
+
     return allProducts.filter(product => {
       // First check if search query matches
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -290,37 +482,23 @@ export default function ProductScreen() {
         return matchesSearch;
       }
       
-      // Get the selected category data
-      const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
-      if (!selectedCategoryData) return false;
-      
-      // If only category is selected (no subcategory), show all products in that category and its subcategories
+      // If only category is selected (no subcategory), show all products in that category
       if (!selectedSubCategory) {
-        return product.category === selectedCategoryData.name && matchesSearch;
+        return product.category === selectedCategory && matchesSearch;
       }
-      
-      // Get the selected subcategory data
-      const selectedSubCategoryData = selectedCategoryData.subCategories?.find(
-        sub => sub.id === selectedSubCategory
-      );
-      if (!selectedSubCategoryData) return false;
       
       // If subcategory is selected but no sub-subcategory, show all products in that subcategory
       if (!selectedSubSubCategory) {
-        return product.subcategory === selectedSubCategoryData.name && matchesSearch;
+        return product.category === selectedCategory && 
+               product.subcategory === selectedSubCategory && 
+               matchesSearch;
       }
-      
-      // Get the selected sub-subcategory data
-      const selectedSubSubCategoryData = selectedSubCategoryData.subCategories?.find(
-        subsub => subsub.id === selectedSubSubCategory
-      );
-      if (!selectedSubSubCategoryData) return false;
       
       // If sub-subcategory is selected, only show products in that specific sub-subcategory
       return (
-        product.category === selectedCategoryData.name &&
-        product.subcategory === selectedSubCategoryData.name &&
-        product.subsubcategory === selectedSubSubCategoryData.name &&
+        product.category === selectedCategory &&
+        product.subcategory === selectedSubCategory &&
+        product.subsubcategory === selectedSubSubCategory &&
         matchesSearch
       );
     });
@@ -351,10 +529,14 @@ export default function ProductScreen() {
     const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
     if (!selectedCategoryData?.subCategories?.length) return null;
 
+    // Sort subcategories by order
+    const sortedSubCategories = [...selectedCategoryData.subCategories]
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
     return (
       <ThemedView style={styles.subCategoriesContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {selectedCategoryData.subCategories.map(subCategory => {
+          {sortedSubCategories.map(subCategory => {
             const isSelected = selectedSubCategory === subCategory.id;
             return (
               <Pressable
@@ -389,10 +571,14 @@ export default function ProductScreen() {
     
     if (!selectedSubCategoryData?.subCategories?.length) return null;
 
+    // Sort sub-subcategories by order
+    const sortedSubSubCategories = [...selectedSubCategoryData.subCategories]
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
     return (
       <ThemedView style={styles.subSubCategoriesContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {selectedSubCategoryData.subCategories.map(subsubCategory => {
+          {sortedSubSubCategories.map(subsubCategory => {
             const isSelected = selectedSubSubCategory === subsubCategory.id;
             return (
               <Pressable
@@ -417,6 +603,250 @@ export default function ProductScreen() {
     );
   };
 
+  const openFilterModal = () => {
+    // Initialize temporary selections with current selections
+    setTempSelectedCategory(selectedCategory);
+    setTempSelectedSubCategory(selectedSubCategory);
+    setTempSelectedSubSubCategory(selectedSubSubCategory);
+    setActiveLevel('main');
+    setFilterModalVisible(true);
+  };
+
+  const closeFilterModal = () => {
+    setFilterModalVisible(false);
+  };
+
+  const applyFilter = () => {
+    // Apply the temporary selections to the actual selections
+    setSelectedCategory(tempSelectedCategory);
+    setSelectedSubCategory(tempSelectedSubCategory);
+    setSelectedSubSubCategory(tempSelectedSubSubCategory);
+    closeFilterModal();
+  };
+
+  const resetFilter = () => {
+    setTempSelectedCategory(null);
+    setTempSelectedSubCategory(null);
+    setTempSelectedSubSubCategory(null);
+    setActiveLevel('main');
+  };
+
+  const handleCategoryPress = (categoryId: string) => {
+    if (tempSelectedCategory === categoryId) {
+      // If already selected, deselect it
+      setTempSelectedCategory(null);
+      setTempSelectedSubCategory(null);
+      setTempSelectedSubSubCategory(null);
+      setActiveLevel('main');
+    } else {
+      // Select the category and show subcategories if available
+      setTempSelectedCategory(categoryId);
+      setTempSelectedSubCategory(null);
+      setTempSelectedSubSubCategory(null);
+      
+      const category = categories.find(cat => cat.id === categoryId);
+      if (category && category.subCategories && category.subCategories.length > 0) {
+        setActiveLevel('sub');
+      } else {
+        setActiveLevel('main');
+      }
+    }
+  };
+
+  const handleSubCategoryPress = (subCategoryId: string) => {
+    if (tempSelectedSubCategory === subCategoryId) {
+      // If already selected, deselect it
+      setTempSelectedSubCategory(null);
+      setTempSelectedSubSubCategory(null);
+      setActiveLevel('sub');
+    } else {
+      // Select the subcategory and show sub-subcategories if available
+      setTempSelectedSubCategory(subCategoryId);
+      setTempSelectedSubSubCategory(null);
+      
+      const category = categories.find(cat => cat.id === tempSelectedCategory);
+      const subCategory = category?.subCategories?.find(sub => sub.id === subCategoryId);
+      
+      if (subCategory && subCategory.subCategories && subCategory.subCategories.length > 0) {
+        setActiveLevel('subsub');
+      } else {
+        setActiveLevel('sub');
+      }
+    }
+  };
+
+  const handleSubSubCategoryPress = (subSubCategoryId: string) => {
+    if (tempSelectedSubSubCategory === subSubCategoryId) {
+      // If already selected, deselect it
+      setTempSelectedSubSubCategory(null);
+    } else {
+      // Select the sub-subcategory
+      setTempSelectedSubSubCategory(subSubCategoryId);
+    }
+  };
+
+  const navigateBack = () => {
+    if (activeLevel === 'subsub') {
+      setActiveLevel('sub');
+      setTempSelectedSubSubCategory(null);
+    } else if (activeLevel === 'sub') {
+      setActiveLevel('main');
+      setTempSelectedSubCategory(null);
+    }
+  };
+
+  const renderFilterModalContent = () => {
+    if (activeLevel === 'main') {
+      // Render main categories with explicit sorting
+      const sortedCategories = [...categories].sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      return (
+        <ScrollView>
+          {sortedCategories.map(category => (
+            <TouchableOpacity
+              key={category.id}
+              style={[
+                styles.categoryItem,
+                tempSelectedCategory === category.id && styles.selectedCategoryItem
+              ]}
+              onPress={() => handleCategoryPress(category.id)}
+            >
+              <ThemedText 
+                style={[
+                  styles.categoryItemText,
+                  tempSelectedCategory === category.id && styles.selectedCategoryItemText
+                ]}
+              >
+                {category.name}
+              </ThemedText>
+              {category.subCategories && category.subCategories.length > 0 && (
+                <Ionicons 
+                  name="chevron-forward" 
+                  size={20} 
+                  color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      );
+    } else if (activeLevel === 'sub') {
+      // Render subcategories
+      const selectedCategoryData = categories.find(cat => cat.id === tempSelectedCategory);
+      
+      // Sort subcategories by order
+      const sortedSubCategories = selectedCategoryData?.subCategories 
+        ? [...selectedCategoryData.subCategories].sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [];
+      
+      return (
+        <ScrollView>
+          {sortedSubCategories.map(subCategory => (
+            <TouchableOpacity
+              key={subCategory.id}
+              style={[
+                styles.categoryItem,
+                tempSelectedSubCategory === subCategory.id && styles.selectedCategoryItem
+              ]}
+              onPress={() => handleSubCategoryPress(subCategory.id)}
+            >
+              <ThemedText 
+                style={[
+                  styles.categoryItemText,
+                  tempSelectedSubCategory === subCategory.id && styles.selectedCategoryItemText
+                ]}
+              >
+                {subCategory.name}
+              </ThemedText>
+              {subCategory.subCategories && subCategory.subCategories.length > 0 && (
+                <Ionicons 
+                  name="chevron-forward" 
+                  size={20} 
+                  color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
+                />
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      );
+    } else if (activeLevel === 'subsub') {
+      // Render sub-subcategories
+      const selectedCategoryData = categories.find(cat => cat.id === tempSelectedCategory);
+      const selectedSubCategoryData = selectedCategoryData?.subCategories?.find(
+        sub => sub.id === tempSelectedSubCategory
+      );
+      
+      // Sort sub-subcategories by order
+      const sortedSubSubCategories = selectedSubCategoryData?.subCategories 
+        ? [...selectedSubCategoryData.subCategories].sort((a, b) => (a.order || 0) - (b.order || 0))
+        : [];
+      
+      return (
+        <ScrollView>
+          {sortedSubSubCategories.map(subSubCategory => (
+            <TouchableOpacity
+              key={subSubCategory.id}
+              style={[
+                styles.categoryItem,
+                tempSelectedSubSubCategory === subSubCategory.id && styles.selectedCategoryItem
+              ]}
+              onPress={() => handleSubSubCategoryPress(subSubCategory.id)}
+            >
+              <ThemedText 
+                style={[
+                  styles.categoryItemText,
+                  tempSelectedSubSubCategory === subSubCategory.id && styles.selectedCategoryItemText
+                ]}
+              >
+                {subSubCategory.name}
+              </ThemedText>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      );
+    }
+    
+    return null;
+  };
+
+  const renderBreadcrumb = () => {
+    if (activeLevel === 'main') return null;
+    
+    const selectedCategoryData = categories.find(cat => cat.id === tempSelectedCategory);
+    const selectedSubCategoryData = selectedCategoryData?.subCategories?.find(
+      sub => sub.id === tempSelectedSubCategory
+    );
+    
+    return (
+      <ThemedView style={styles.breadcrumb}>
+        <TouchableOpacity style={styles.breadcrumbItem} onPress={() => setActiveLevel('main')}>
+          <ThemedText style={styles.breadcrumbText}>All Categories</ThemedText>
+        </TouchableOpacity>
+        
+        {selectedCategoryData && (
+          <>
+            <ThemedText style={styles.breadcrumbSeparator}>{'>'}</ThemedText>
+            <TouchableOpacity 
+              style={styles.breadcrumbItem} 
+              onPress={() => activeLevel === 'subsub' ? setActiveLevel('sub') : null}
+            >
+              <ThemedText style={styles.breadcrumbText}>{selectedCategoryData.name}</ThemedText>
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {selectedSubCategoryData && activeLevel === 'subsub' && (
+          <>
+            <ThemedText style={styles.breadcrumbSeparator}>{'>'}</ThemedText>
+            <ThemedView style={styles.breadcrumbItem}>
+              <ThemedText style={styles.breadcrumbText}>{selectedSubCategoryData.name}</ThemedText>
+            </ThemedView>
+          </>
+        )}
+      </ThemedView>
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
       <StatusBar 
@@ -429,10 +859,21 @@ export default function ProductScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Search products..."
-            placeholderTextColor='#999999'
+            placeholderTextColor={colorScheme === 'dark' ? Colors.dark.textMuted : Colors.light.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
+          <TouchableOpacity 
+            style={styles.filterButton} 
+            onPress={openFilterModal}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="filter" 
+              size={24} 
+              color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
+            />
+          </TouchableOpacity>
         </ThemedView>
         <ThemedView style={styles.categoriesContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -455,6 +896,8 @@ export default function ProductScreen() {
             </Pressable>
             {categories
               .filter(cat => !cat.parentId && cat.id !== 'all')
+              // Ensure categories are sorted by order
+              .sort((a, b) => (a.order || 0) - (b.order || 0))
               .map(category => {
                 const isSelected = selectedCategory === category.id;
                 return (
@@ -533,6 +976,70 @@ export default function ProductScreen() {
             )}
           </ThemedView>
         </ScrollView>
+        
+        {/* Filter Modal */}
+        <Modal
+          visible={filterModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={closeFilterModal}
+        >
+          <TouchableWithoutFeedback onPress={closeFilterModal}>
+            <ThemedView style={styles.modalOverlay}>
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <ThemedView style={styles.modalContainer}>
+                  <ThemedView style={styles.modalHeader}>
+                    <TouchableOpacity onPress={navigateBack} disabled={activeLevel === 'main'}>
+                      {activeLevel !== 'main' && (
+                        <Ionicons 
+                          name="arrow-back" 
+                          size={24} 
+                          color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
+                        />
+                      )}
+                    </TouchableOpacity>
+                    <ThemedText style={styles.modalTitle}>
+                      {activeLevel === 'main' ? 'Select Category' : 
+                       activeLevel === 'sub' ? 'Select Subcategory' : 'Select Sub-subcategory'}
+                    </ThemedText>
+                    <TouchableOpacity onPress={closeFilterModal}>
+                      <Ionicons 
+                        name="close" 
+                        size={24} 
+                        color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
+                      />
+                    </TouchableOpacity>
+                  </ThemedView>
+                  
+                  {renderBreadcrumb()}
+                  
+                  <ThemedView style={styles.modalContent}>
+                    {renderFilterModalContent()}
+                  </ThemedView>
+                  
+                  <ThemedView style={styles.modalFooter}>
+                    <TouchableOpacity 
+                      style={[styles.modalButton, styles.cancelButton]} 
+                      onPress={resetFilter}
+                    >
+                      <ThemedText style={[styles.buttonText, styles.cancelButtonText]}>
+                        Reset
+                      </ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.modalButton, styles.applyButton]} 
+                      onPress={applyFilter}
+                    >
+                      <ThemedText style={[styles.buttonText, styles.applyButtonText]}>
+                        Apply
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </ThemedView>
+                </ThemedView>
+              </TouchableWithoutFeedback>
+            </ThemedView>
+          </TouchableWithoutFeedback>
+        </Modal>
       </SafeAreaView>
     </ThemedView>
   );

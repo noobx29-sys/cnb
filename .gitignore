@@ -39,3 +39,5 @@ app-example
 
 # Environment variables
 .env
+# Credentials
+credentials/
