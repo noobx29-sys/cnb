@@ -32,8 +32,12 @@
         "backgroundColor": "#FB8A13"
       },
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -80,6 +84,10 @@
         "messagingSenderId": "465463891466",
         "appId": "1:465463891466:ios:91389050378e1701b9f1f3"
       }
+    },
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/151b57ce-bc3b-4490-8b1a-076e7828c2f2"
     }
   }
 }
