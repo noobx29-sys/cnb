@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 3.13.3",
-    "appVersionSource": "remote"
+    "appVersionSource": "local"
   },
   "build": {
     "preview": {
@@ -19,10 +19,12 @@
         "NODE_OPTIONS": "--max_old_space_size=4096",
         "EXPO_USE_CUSTOM_ANDROID_SETTINGS": "true",
         "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.workers.max=2"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "distribution": "store",
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle",
         "image": "ubuntu-22.04-jdk-17-ndk-r26b"
@@ -30,7 +32,8 @@
       "ios": {
         "image": "latest",
         "resourceClass": "m-medium"
-      }
+      },
+      "channel": "production"
     },
     "development": {
       "developmentClient": true,
@@ -41,7 +44,8 @@
       },
       "ios": {
         "simulator": true
-      }
+      },
+      "channel": "development"
     }
   },
   "submit": {

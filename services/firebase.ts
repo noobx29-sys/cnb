@@ -41,11 +41,12 @@ export interface UserData {
   uid: string;
   email: string;
   name: string;
-  companyName: string;
-  fullName: string;
+  companyName?: string;
+  fullName?: string;
   role: UserRole;
   createdAt: Date;
-  updatedAt: Date;
+  updatedAt?: Date;
+  isGuest?: boolean;
 }
 
 // Product types
@@ -105,7 +106,7 @@ export interface Promotion {
 }
 
 // User roles
-export type UserRole = 'Admin' | 'Manager' | 'User - Price' | 'User - No Price' | 'Pending';
+export type UserRole = 'Admin' | 'Manager' | 'User - Price' | 'User - No Price' | 'Pending' | 'Guest';
 
 // Update or add this interface
 export interface User {

@@ -20,10 +20,25 @@ export function usePermissions() {
     return userData?.role === 'Admin' || userData?.role === 'Manager' || userData?.role === 'User - Price';
   };
 
+  const isGuest = () => {
+    return userData?.role === 'Guest';
+  };
+
+  const canAccessFeature = (feature: 'products' | 'categories' | 'contact' | 'profile' | 'cart' | 'checkout') => {
+    if (isGuest()) {
+      // Define what features guests can access
+      const guestAccessibleFeatures = ['products', 'categories', 'contact'];
+      return guestAccessibleFeatures.includes(feature);
+    }
+    return true; // Non-guest users can access all features
+  };
+
   return {
     canManageProducts,
     canManagePromotions,
     canManageUsers,
     canSeePrice,
+    isGuest,
+    canAccessFeature,
   };
 } 

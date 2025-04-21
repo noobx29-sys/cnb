@@ -1,10 +1,10 @@
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput, Pressable, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { signInWithEmailAndPassword, setPersistence, getReactNativePersistence, sendPasswordResetEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, getReactNativePersistence, sendPasswordResetEmail, signInAnonymously } from 'firebase/auth';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -45,6 +45,21 @@ export default function SignIn() {
     },
     buttonText: {
       color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    guestButton: {
+      height: 48,
+      backgroundColor: 'transparent',
+      borderRadius: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: '#FB8A13',
+    },
+    guestButtonText: {
+      color: '#FB8A13',
       fontSize: 16,
       fontWeight: '600',
     },
@@ -131,6 +146,40 @@ export default function SignIn() {
     }
   };
 
+  const handleGuestSignIn = async () => {
+    try {
+      if (!auth) {
+        console.error('Auth is not initialized');
+        return;
+      }
+
+      // Sign in anonymously
+      const userCredential = await signInAnonymously(auth);
+      console.log('Guest sign in successful, user ID:', userCredential.user.uid);
+      
+      // Create a guest user document in Firestore
+      const guestUserRef = doc(db, 'users', userCredential.user.uid);
+      await setDoc(guestUserRef, {
+        uid: userCredential.user.uid,
+        email: 'guest@example.com', // Placeholder email
+        name: 'Guest User',
+        role: 'Guest', // Special role for guests
+        createdAt: new Date(),
+        isGuest: true
+      });
+      
+      // Store minimal user data in AsyncStorage
+      await AsyncStorage.setItem('user_id', userCredential.user.uid);
+      await AsyncStorage.setItem('is_guest', 'true');
+      
+      // Navigate to the main app
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      console.error('Guest sign in error:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+
   const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert('Error', 'Please enter your email address first');
@@ -187,6 +236,10 @@ export default function SignIn() {
 
       <Pressable style={styles.button} onPress={handleSignIn}>
         <ThemedText style={styles.buttonText}>Sign In</ThemedText>
+      </Pressable>
+      
+      <Pressable style={styles.guestButton} onPress={handleGuestSignIn}>
+        <ThemedText style={styles.guestButtonText}>Continue as Guest</ThemedText>
       </Pressable>
 
       <ThemedView style={styles.footer}>

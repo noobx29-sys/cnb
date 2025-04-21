@@ -1,22 +1,22 @@
 {
   "expo": {
-    "name": "CNB Carpets",
+    "name": "NEWTEX",
     "slug": "cnb",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/images/cnb-app.png",
+    "icon": "./assets/images/newtex.png",
     "scheme": "cnb",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "developmentClient": false,
     "splash": {
-      "image": "./assets/images/cnb-app.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FB8A13"
+      "image": "./assets/images/newtex.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "bundleIdentifier": "com.cnb.app",
-      "buildNumber": "2",
+      "buildNumber": "6",
       "versionCode": 1,
       "supportsTablet": true,
       "infoPlist": {
@@ -28,8 +28,8 @@
       "package": "com.cnb.app",
       "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/cnb-app.png",
-        "backgroundColor": "#FB8A13"
+        "foregroundImage": "./assets/images/newtex.png",
+        "backgroundColor": "#FFFFFF"
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -45,10 +45,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/cnb-app.png",
+          "image": "./assets/images/newtex.png",
           "imageWidth": 100,
           "resizeMode": "contain",
-          "backgroundColor": "#FB8A13"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       [

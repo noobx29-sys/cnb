@@ -10,10 +10,12 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/context/ColorSchemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function TabLayout() {
   const { colorScheme } = useColorScheme();
-  const { userData, loading } = useAuth();
+  const { userData, loading, isGuest } = useAuth();
+  const { canAccessFeature } = usePermissions();
   const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
@@ -21,9 +23,10 @@ export default function TabLayout() {
       role: userData?.role,
       loading,
       isAdmin: userData?.role === 'Admin',
+      isGuest,
       fullUserData: userData
     });
-  }, [userData?.role, loading]);
+  }, [userData?.role, loading, isGuest]);
 
   if (loading) {
     return null;
@@ -31,7 +34,7 @@ export default function TabLayout() {
 
   const isAdmin = userData?.role === 'Admin';
 
-  console.log('Is admin?:', isAdmin);
+  console.log('Is admin?:', isAdmin, 'Is guest?:', isGuest);
 
   return (
     <>
@@ -103,6 +106,7 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) => <Ionicons name="person" size={28} color={color} />,
+          href: isGuest ? null : undefined,
         }}
       />
       <Tabs.Screen

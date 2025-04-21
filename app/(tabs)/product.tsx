@@ -11,6 +11,7 @@ import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProductGridWidth, getContentWidth } from '@/utils/responsive';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useAuth } from '@/context/AuthContext';
 
 interface SubCategory {
   id: string;
@@ -62,6 +63,8 @@ export default function ProductScreen() {
   const [tempSelectedCategory, setTempSelectedCategory] = useState<string | null>(null);
   const [tempSelectedSubCategory, setTempSelectedSubCategory] = useState<string | null>(null);
   const [tempSelectedSubSubCategory, setTempSelectedSubSubCategory] = useState<string | null>(null);
+  const [guestBannerVisible, setGuestBannerVisible] = useState(true);
+  const { isGuest } = useAuth();
 
   // Function to get category/subcategory/subsubcategory name from ID
   const getCategoryNameById = (categoryId: string | null): string => {
@@ -412,6 +415,33 @@ export default function ProductScreen() {
       opacity: 0.7,
       padding: 8,
       paddingTop: 0,
+    },
+    guestBanner: {
+      backgroundColor: '#FB8A13',
+      padding: 12,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    guestBannerText: {
+      color: '#FFFFFF',
+      flex: 1,
+      fontSize: 14,
+    },
+    guestBannerButton: {
+      backgroundColor: '#FFFFFF',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 4,
+      marginLeft: 8,
+    },
+    guestBannerButtonText: {
+      color: '#FB8A13',
+      fontWeight: '600',
+      fontSize: 12,
+    },
+    guestBannerCloseButton: {
+      padding: 4,
     },
   });
 
@@ -855,6 +885,26 @@ export default function ProductScreen() {
         barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'}
       />
       <SafeAreaView style={styles.safeArea}>
+        {isGuest && guestBannerVisible && (
+          <ThemedView style={styles.guestBanner}>
+            <ThemedText style={styles.guestBannerText}>
+              You're browsing as a guest. Sign up to see prices and access all features.
+            </ThemedText>
+            <Pressable 
+              style={styles.guestBannerButton}
+              onPress={() => router.push('/(auth)/sign-up')}
+            >
+              <ThemedText style={styles.guestBannerButtonText}>Sign Up</ThemedText>
+            </Pressable>
+            <Pressable 
+              style={styles.guestBannerCloseButton}
+              onPress={() => setGuestBannerVisible(false)}
+            >
+              <Ionicons name="close" size={20} color="#FFFFFF" />
+            </Pressable>
+          </ThemedView>
+        )}
+        
         <ThemedView style={styles.searchContainer}>
           <TextInput
             style={styles.searchInput}
