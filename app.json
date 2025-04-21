@@ -4,11 +4,13 @@
     "slug": "cnb",
     "version": "1.0.3",
     "orientation": "portrait",
-    "icon": "./assets/images/newtex.png",
+    "icon": "./assets/images/newtex-square.png",
     "scheme": "cnb",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "developmentClient": false,
+    "developmentClient": {
+      "enabled": false
+    },
     "splash": {
       "image": "./assets/images/newtex.png",
       "resizeMode": "cover",
@@ -28,13 +30,10 @@
       "package": "com.cnb.app",
       "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/newtex.png",
+        "foregroundImage": "./assets/images/newtex-square.png",
         "backgroundColor": "#FFFFFF"
       },
       "permissions": [
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
