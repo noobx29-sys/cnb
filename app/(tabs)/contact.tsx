@@ -189,7 +189,7 @@ export default function Contact() {
         >
           <ThemedView style={styles.content}>
             <ThemedView style={styles.titleContainer}>
-              <ThemedText type="title">CNB CARPETS SDN BHD</ThemedText>
+              <ThemedText type="title">Newtex Carpets Sdn Bhd</ThemedText>
             </ThemedView>
             
             <TouchableOpacity onPress={() => handlePhoneCall('1300222622')}>
@@ -207,7 +207,7 @@ export default function Contact() {
                 Petaling Jaya Office
               </ThemedText>
               {!mapError ? (
-                renderMap(3.111126, 101.611626, "CNB Carpets PJ Office")
+                renderMap(3.111126, 101.611626, "Newtex Carpets PJ Office")
               ) : (
                 <ThemedText style={styles.sectionContent}>
                   Map temporarily unavailable

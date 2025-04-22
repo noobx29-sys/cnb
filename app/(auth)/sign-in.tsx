@@ -202,7 +202,7 @@ export default function SignIn() {
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.titleContainer}>
-        <Text style={styles.title}>CNB Carpets</Text>
+        <Text style={styles.title}>Newtex Carpets</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
       </ThemedView>
 

@@ -92,7 +92,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2
-        versionName "1.0.1"
+        versionName "1.0.3"
     }
     signingConfigs {
         debug {
@@ -153,9 +153,6 @@ dependencies {
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
     def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";
-
-    // Add explicit BlurView dependency
-    implementation 'com.github.Dimezis:BlurView:version-2.0.2'
 
     if (isGifEnabled) {
         // For animated gif support

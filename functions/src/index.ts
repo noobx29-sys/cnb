@@ -42,15 +42,15 @@ export const onUserRoleUpdate = functions.firestore
         const msg = {
           to: userEmail,
           from: "ifaieq12@gmail.com",
-          subject: "CNB Carpets - Account Activated",
+          subject: "Newtex Carpets - Account Activated",
           html: `
-            <h1>Welcome to CNB Carpets!</h1>
+            <h1>Welcome to Newtex Carpets!</h1>
             <p>Your account has been approved and activated.</p>
-            <p>You can now log in to the CNB Carpets app with your email and 
+            <p>You can now log in to the Newtex Carpets app with your email and 
                password.</p>
             <br>
             <p>Best regards,</p>
-            <p>The CNB Carpets Team</p>
+            <p>The Newtex Carpets Team</p>
           `,
         };
 
