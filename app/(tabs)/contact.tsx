@@ -329,7 +329,7 @@ export default function Contact() {
             </ThemedView>
 
             <ThemedText style={styles.footer}>
-              © 2024 CNB Carpets Sdn. Bhd. All Rights Reserved.
+              © 2024 Newtex Carpets Sdn. Bhd. All Rights Reserved.
             </ThemedText>
           </ThemedView>
         </ScrollView>
