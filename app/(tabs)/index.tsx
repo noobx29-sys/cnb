@@ -365,7 +365,7 @@ export default function HomeScreen() {
             )}
           </ThemedView>
 
-          {canManageProducts() && (
+          {/* {canManageProducts() && (
             <ThemedView style={styles.lowStockSection}>
               <ThemedText style={styles.sectionTitle}>Running out soon</ThemedText>
               {lowStockProducts.length === 0 ? (
@@ -400,7 +400,7 @@ export default function HomeScreen() {
                 ))
               )}
             </ThemedView>
-          )}
+          )} */}
         </ScrollView>
       </SafeAreaView>
     </ThemedView>

@@ -89,7 +89,8 @@ export default function Contact() {
     navigationLinks: {
       flexDirection: 'row',
       gap: 16,
-      marginTop: 8,
+      marginTop: 4,
+      marginBottom: 10,
     },
     navigationIcon: {
       width: 24,
@@ -116,25 +117,25 @@ export default function Contact() {
   const renderMap = (latitude: number, longitude: number, title: string) => {
     if (Platform.OS === 'android') {
       // Return address information based on the location
-      if (latitude === 3.111126 && longitude === 101.611626) {
+      if (latitude === 3.11125 && longitude === 101.61162) {
         return (
           <ThemedView style={{ marginVertical: 10, padding: 12, backgroundColor: '#e0e0e0', borderRadius: 10 }}>
             <ThemedText style={{ fontSize: 16, lineHeight: 24, color: '#4a4a4a' }}>
-              No. 12, Jalan 51/225A,{'\n'}
-              Zon Perindustrian PJCT,{'\n'}
-              46100 Petaling Jaya,{'\n'}
+              No. 18, Jalan SS 2/3,{'\n'}
+              SS 2,{'\n'}
+              47300 Petaling Jaya,{'\n'}
               Selangor, Malaysia
             </ThemedText>
           </ThemedView>
         );
-      } else if (latitude === 3.06937 && longitude === 101.662009) {
+      } else if (latitude === 3.06942 && longitude === 101.66206) {
         return (
           <ThemedView style={{ marginVertical: 10, padding: 12, backgroundColor: '#e0e0e0', borderRadius: 10 }}>
             <ThemedText style={{ fontSize: 16, lineHeight: 24, color: '#4a4a4a' }}>
-              No. 1, Jalan Puteri 7/13A,{'\n'}
-              Bandar Puteri,{'\n'}
-              47100 Puchong,{'\n'}
-              Selangor, Malaysia
+              No.59, Jalan 10/152, Taman Industrial O.U.G., {'\n'}
+              Off Batu 6 1/2, Jalan Puchong,{'\n'}
+              58200,{'\n'}
+              Kuala Lumpur, Malaysia
             </ThemedText>
           </ThemedView>
         );
@@ -207,12 +208,27 @@ export default function Contact() {
                 Petaling Jaya Office
               </ThemedText>
               {!mapError ? (
-                renderMap(3.111126, 101.611626, "Newtex Carpets PJ Office")
+                renderMap(3.11125, 101.61162, "Newtex Carpets PJ Office")
               ) : (
                 <ThemedText style={styles.sectionContent}>
                   Map temporarily unavailable
                 </ThemedText>
               )}
+              <ThemedView style={styles.navigationLinks}>
+                <TouchableOpacity onPress={() => Linking.openURL('https://ul.waze.com/ul?ll=3.11125000%2C101.61162000&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location')}>
+                  <ThemedView style={styles.linkContainer}>
+                    <FontAwesome5 name="waze" size={30} color="#33ccff" />
+                    <ThemedText type="link" style={{fontSize: 16, color: '#33ccff'}}>Waze</ThemedText>
+                  </ThemedView>
+                </TouchableOpacity>
+                
+                <TouchableOpacity onPress={() => Linking.openURL('https://www.google.com/maps/dir/?api=1&destination=3.11125,101.61162')}>
+                  <ThemedView style={styles.linkContainer}>
+                    <FontAwesome5 name="google" size={24} color="#DB4437" />
+                    <ThemedText type="link" style={{fontSize: 16, color: '#DB4437'}}>Google Maps</ThemedText>
+                  </ThemedView>
+                </TouchableOpacity>
+              </ThemedView>
               <TouchableOpacity onPress={() => handlePhoneCall('60376663333')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>
                   <Ionicons name="call" size={30} color="#FB8A13" />
@@ -236,21 +252,6 @@ export default function Contact() {
                 Monday - Friday: 8:30 AM - 5:00 PM{'\n'}
                 Saturday: 8:30 AM - 1:00 PM
               </ThemedText>
-              <ThemedView style={styles.navigationLinks}>
-                <TouchableOpacity onPress={() => Linking.openURL('https://ul.waze.com/ul?ll=3.11112600%2C101.61162600&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location')}>
-                  <ThemedView style={styles.linkContainer}>
-                    <FontAwesome5 name="waze" size={30} color="#33ccff" />
-                    <ThemedText type="link" style={{fontSize: 16, color: '#33ccff'}}>Waze</ThemedText>
-                  </ThemedView>
-                </TouchableOpacity>
-                
-                <TouchableOpacity onPress={() => Linking.openURL('https://www.google.com/maps/dir/?api=1&destination=3.111126,101.611626')}>
-                  <ThemedView style={styles.linkContainer}>
-                    <FontAwesome5 name="google" size={24} color="#DB4437" />
-                    <ThemedText type="link" style={{fontSize: 16, color: '#DB4437'}}>Google Maps</ThemedText>
-                  </ThemedView>
-                </TouchableOpacity>
-              </ThemedView>
             </ThemedView>
 
             {/* Puchong Office */}
@@ -259,12 +260,27 @@ export default function Contact() {
                 Puchong Office
               </ThemedText>
               {!mapError ? (
-                renderMap(3.06937, 101.662009, "CNB Carpets Puchong Office")
+                renderMap(3.06942, 101.66206, "Newtex Carpets Puchong Office")
               ) : (
                 <ThemedText style={styles.sectionContent}>
                   Map temporarily unavailable
                 </ThemedText>
               )}
+              <ThemedView style={styles.navigationLinks}>
+                <TouchableOpacity onPress={() => Linking.openURL('https://ul.waze.com/ul?ll=3.06942000%2C101.66206000&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location')}>
+                  <ThemedView style={styles.linkContainer}>
+                    <FontAwesome5 name="waze" size={30} color="#33ccff" />
+                    <ThemedText type="link" style={{fontSize: 16, color: '#33ccff'}}>Waze</ThemedText>
+                  </ThemedView>
+                </TouchableOpacity>
+                
+                <TouchableOpacity onPress={() => Linking.openURL('https://www.google.com/maps/dir/?api=1&destination=3.06942,101.66206')}>
+                  <ThemedView style={styles.linkContainer}>
+                    <FontAwesome5 name="google" size={24} color="#DB4437" />
+                    <ThemedText type="link" style={{fontSize: 16, color: '#DB4437'}}>Google Maps</ThemedText>
+                  </ThemedView>
+                </TouchableOpacity>
+              </ThemedView>
               <TouchableOpacity onPress={() => handlePhoneCall('603776663377')} style={{marginBottom: 10}}>
                 <ThemedView style={styles.linkContainer}>
                   <Ionicons name="call" size={30} color="#FB8A13" />
@@ -288,21 +304,6 @@ export default function Contact() {
                 Monday - Friday: 8:30 AM - 5:00 PM{'\n'}
                 Saturday: 8:30 AM - 1:00 PM
               </ThemedText>
-              <ThemedView style={styles.navigationLinks}>
-                <TouchableOpacity onPress={() => Linking.openURL('https://ul.waze.com/ul?ll=3.06937000%2C101.66200900&navigate=yes&utm_campaign=default&utm_source=waze_website&utm_medium=lm_share_location')}>
-                  <ThemedView style={styles.linkContainer}>
-                    <FontAwesome5 name="waze" size={30} color="#33ccff" />
-                    <ThemedText type="link" style={{fontSize: 16, color: '#33ccff'}}>Waze</ThemedText>
-                  </ThemedView>
-                </TouchableOpacity>
-                
-                <TouchableOpacity onPress={() => Linking.openURL('https://www.google.com/maps/dir/?api=1&destination=3.06937,101.662009')}>
-                  <ThemedView style={styles.linkContainer}>
-                    <FontAwesome5 name="google" size={24} color="#DB4437" />
-                    <ThemedText type="link" style={{fontSize: 16, color: '#DB4437'}}>Google Maps</ThemedText>
-                  </ThemedView>
-                </TouchableOpacity>
-              </ThemedView>
             </ThemedView>
 
             <ThemedView style={styles.section}>
