@@ -31,7 +31,7 @@
       "package": "com.cnb.app",
       "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/newtex-square.png",
+        "foregroundImage": "./assets/icons/newtex-foreground.png",
         "backgroundColor": "#FFFFFF"
       },
       "permissions": [
@@ -46,7 +46,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/newtex.png",
-          "imageWidth": 100,
+          "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }

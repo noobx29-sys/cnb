@@ -8,8 +8,8 @@
             android:insetRight="15%"
             android:insetBottom="15%">
             <bitmap
-                android:src="@mipmap/ic_launcher_foreground"
+                android:src="@drawable/newtex_foreground"
                 android:gravity="center" />
         </inset>
     </foreground>
-</adaptive-icon>
+</adaptive-icon> 
