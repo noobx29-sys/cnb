@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProductGridWidth, getContentWidth } from '@/utils/responsive';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/context/AuthContext';
+import { OptimizedImage } from '@/components/OptimizedImage';
 
 interface SubCategory {
   id: string;
@@ -1004,9 +1005,10 @@ export default function ProductScreen() {
                   style={styles.productCard}
                 >
                   {product.images && product.images[0] && (
-                    <Image
-                      source={{ uri: product.images[0] }}
+                    <OptimizedImage
+                      uri={product.images[0]}
                       style={styles.productImage}
+                      contentFit="cover"
                     />
                   )}
                   <ThemedText numberOfLines={2} style={styles.productName}>

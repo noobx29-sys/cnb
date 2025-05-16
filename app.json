@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/images/newtex-square.png",
     "scheme": "cnb",
-    "resizeMode": "contain",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "developmentClient": {
@@ -32,14 +31,16 @@
       "package": "com.cnb.app",
       "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/newtex-square.png",
-        "backgroundColor": "#FFFFFF"
+        "foregroundImage": "./assets/images/newtex-square.png",
+        "backgroundColor": "#FFFFFF",
+        "foregroundImageScale": 0.75
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "icon": "./assets/images/newtex-square.png"
     },
     "plugins": [
       "expo-router",

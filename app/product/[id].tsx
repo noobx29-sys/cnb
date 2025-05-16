@@ -37,7 +37,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { getDocs } from 'firebase/firestore';
 import { productsCollection } from '@/services/firebase';
-import { CachedImage } from '@/components/CachedImage';
+import { OptimizedImage } from '@/components/OptimizedImage';
 import { isDesktop, getCarouselWidth } from '@/utils/responsive';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -812,10 +812,10 @@ export default function ProductViewScreen() {
               >
                 {product?.images?.slice(0, 6).map((image, index) => (
                   <TouchableOpacity key={index} onPress={() => openModal(index)}>
-                    <CachedImage
+                    <OptimizedImage
                       uri={image}
                       style={styles.image}
-                      resizeMode="contain"
+                      contentFit="contain"
                       placeholder={
                         <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
                           <ThemedText>Loading...</ThemedText>
@@ -894,13 +894,13 @@ export default function ProductViewScreen() {
                     style={styles.gridImageContainer}
                     onPress={() => handleGridImagePress(index)}
                   >
-                    <CachedImage
+                    <OptimizedImage
                       uri={image}
                       style={[
                         styles.gridImage,
                         activeImageIndex === index && styles.activeGridImage
                       ]}
-                      resizeMode="contain"
+                      contentFit="contain"
                       placeholder={
                         <View style={[styles.gridImage, { justifyContent: 'center', alignItems: 'center' }]}>
                           <ActivityIndicator size="small" color="#FB8A13" />
