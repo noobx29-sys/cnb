@@ -1008,7 +1008,7 @@ export default function ProductScreen() {
                     <OptimizedImage
                       uri={product.images[0]}
                       style={styles.productImage}
-                      contentFit="cover"
+                      resizeMode="cover"
                     />
                   )}
                   <ThemedText numberOfLines={2} style={styles.productName}>

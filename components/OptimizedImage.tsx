@@ -1,24 +1,22 @@
 import React from 'react';
-import { Image as ExpoImage } from 'expo-image';
+import FastImage from 'react-native-fast-image';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
 interface OptimizedImageProps {
   uri: string;
   style: any;
-  contentFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
+  resizeMode?: 'cover' | 'contain' | 'stretch' | 'center';
   placeholder?: React.ReactNode;
   onLoad?: () => void;
-  transition?: number;
 }
 
 export function OptimizedImage({
   uri,
   style,
-  contentFit = 'cover',
+  resizeMode = 'cover',
   placeholder,
   onLoad,
-  transition = 300,
   ...rest
 }: OptimizedImageProps) {
   if (!uri) {
@@ -29,14 +27,23 @@ export function OptimizedImage({
     );
   }
 
+  // Convert resizeMode to FastImage constants
+  const fastImageResizeMode = {
+    'cover': FastImage.resizeMode.cover,
+    'contain': FastImage.resizeMode.contain,
+    'stretch': FastImage.resizeMode.stretch,
+    'center': FastImage.resizeMode.center,
+  }[resizeMode];
+
   return (
-    <ExpoImage
-      source={{ uri }}
+    <FastImage
+      source={{ 
+        uri,
+        priority: FastImage.priority.normal,
+        cache: FastImage.cacheControl.immutable
+      }}
       style={style}
-      contentFit={contentFit}
-      transition={transition}
-      cachePolicy="memory-disk"
-      placeholder={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==' }}
+      resizeMode={fastImageResizeMode}
       onLoad={onLoad}
       {...rest}
     />

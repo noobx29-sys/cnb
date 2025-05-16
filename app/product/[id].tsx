@@ -815,7 +815,7 @@ export default function ProductViewScreen() {
                     <OptimizedImage
                       uri={image}
                       style={styles.image}
-                      contentFit="contain"
+                      resizeMode="contain"
                       placeholder={
                         <View style={[styles.image, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
                           <ThemedText>Loading...</ThemedText>
@@ -900,7 +900,7 @@ export default function ProductViewScreen() {
                         styles.gridImage,
                         activeImageIndex === index && styles.activeGridImage
                       ]}
-                      contentFit="contain"
+                      resizeMode="contain"
                       placeholder={
                         <View style={[styles.gridImage, { justifyContent: 'center', alignItems: 'center' }]}>
                           <ActivityIndicator size="small" color="#FB8A13" />
