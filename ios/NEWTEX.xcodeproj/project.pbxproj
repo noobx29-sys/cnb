@@ -11,8 +11,8 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		4FFA6C173CFF47E89A865CF1 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28656E379FD469CBD51B7D4 /* noop-file.swift */; };
-		5E42956758B8F7B66146EEE1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C3CCA4B0F99A2A9D191FD31E /* PrivacyInfo.xcprivacy */; };
+		4C139D61D8AA18772315F950 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F708A7A2463A50C7D18FA8F8 /* PrivacyInfo.xcprivacy */; };
+		59BD0BF03B9144C6B7578DDB /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2D87A6ADECD4753B109FCC7 /* noop-file.swift */; };
 		96905EF65AED1B983A6B3ABC /* libPods-NEWTEX.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58EEBF8E8E6FB1BC6CAF49B5 /* libPods-NEWTEX.a */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
@@ -25,15 +25,15 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = NEWTEX/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = NEWTEX/Info.plist; sourceTree = "<group>"; };
 		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = NEWTEX/main.m; sourceTree = "<group>"; };
-		2D9218C27B8B413D8A524C2C /* NEWTEX-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "NEWTEX-Bridging-Header.h"; path = "NEWTEX/NEWTEX-Bridging-Header.h"; sourceTree = "<group>"; };
 		58EEBF8E8E6FB1BC6CAF49B5 /* libPods-NEWTEX.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-NEWTEX.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C2E3173556A471DD304B334 /* Pods-NEWTEX.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NEWTEX.debug.xcconfig"; path = "Target Support Files/Pods-NEWTEX/Pods-NEWTEX.debug.xcconfig"; sourceTree = "<group>"; };
 		7A4D352CD337FB3A3BF06240 /* Pods-NEWTEX.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NEWTEX.release.xcconfig"; path = "Target Support Files/Pods-NEWTEX/Pods-NEWTEX.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = NEWTEX/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		C28656E379FD469CBD51B7D4 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "NEWTEX/noop-file.swift"; sourceTree = "<group>"; };
-		C3CCA4B0F99A2A9D191FD31E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = NEWTEX/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C2D87A6ADECD4753B109FCC7 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "NEWTEX/noop-file.swift"; sourceTree = "<group>"; };
+		E57AB85FF21E49E0B04FB7D2 /* NEWTEX-Bridging-Header.h */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.c.h; name = "NEWTEX-Bridging-Header.h"; path = "NEWTEX/NEWTEX-Bridging-Header.h"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F708A7A2463A50C7D18FA8F8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = NEWTEX/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-NEWTEX/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -59,9 +59,9 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				C28656E379FD469CBD51B7D4 /* noop-file.swift */,
-				2D9218C27B8B413D8A524C2C /* NEWTEX-Bridging-Header.h */,
-				C3CCA4B0F99A2A9D191FD31E /* PrivacyInfo.xcprivacy */,
+				C2D87A6ADECD4753B109FCC7 /* noop-file.swift */,
+				E57AB85FF21E49E0B04FB7D2 /* NEWTEX-Bridging-Header.h */,
+				F708A7A2463A50C7D18FA8F8 /* PrivacyInfo.xcprivacy */,
 			);
 			name = NEWTEX;
 			sourceTree = "<group>";
@@ -147,13 +147,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "NEWTEX" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				B7E2747776FF43AC17E50483 /* [Expo] Configure project */,
+				B2CC7E26C52536EC05D3DEC1 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				D37A9A4E69B6DAFB331EA9E3 /* [CP] Embed Pods Frameworks */,
+				DEADA1D82DF0A376AF5B2712 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -203,7 +203,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				5E42956758B8F7B66146EEE1 /* PrivacyInfo.xcprivacy in Resources */,
+				4C139D61D8AA18772315F950 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,7 +293,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NEWTEX/Pods-NEWTEX-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		B7E2747776FF43AC17E50483 /* [Expo] Configure project */ = {
+		B2CC7E26C52536EC05D3DEC1 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -312,7 +312,7 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-NEWTEX/expo-configure-project.sh\"\n";
 		};
-		D37A9A4E69B6DAFB331EA9E3 /* [CP] Embed Pods Frameworks */ = {
+		DEADA1D82DF0A376AF5B2712 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -340,7 +340,7 @@
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
-				4FFA6C173CFF47E89A865CF1 /* noop-file.swift in Sources */,
+				59BD0BF03B9144C6B7578DDB /* noop-file.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -371,7 +371,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = com.cnb.app;
-				PRODUCT_NAME = NEWTEX;
+				PRODUCT_NAME = "NEWTEX";
 				SWIFT_OBJC_BRIDGING_HEADER = "NEWTEX/NEWTEX-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -399,7 +399,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = com.cnb.app;
-				PRODUCT_NAME = NEWTEX;
+				PRODUCT_NAME = "NEWTEX";
 				SWIFT_OBJC_BRIDGING_HEADER = "NEWTEX/NEWTEX-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

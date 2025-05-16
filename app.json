@@ -31,7 +31,7 @@
       "package": "com.cnb.app",
       "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icons/newtex-foreground.png",
+        "foregroundImage": "./assets/icons/newtex-square.png",
         "backgroundColor": "#FFFFFF"
       },
       "permissions": [
