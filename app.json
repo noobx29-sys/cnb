@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/newtex-square.png",
     "scheme": "cnb",
+    "resizeMode": "contain",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "developmentClient": {
