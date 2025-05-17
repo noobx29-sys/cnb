@@ -33,7 +33,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/newtex-square.png",
         "backgroundColor": "#FFFFFF",
-        "foregroundImageScale": 2.0
+        "foregroundImageScale": 0.2
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
