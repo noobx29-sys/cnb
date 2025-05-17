@@ -31,16 +31,16 @@
       "package": "com.cnb.app",
       "versionCode": 2,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/newtex-square.png",
+        "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#FFFFFF",
-        "foregroundImageScale": 0.2
+        "foregroundImageScale": 1.0
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ],
-      "icon": "./assets/images/newtex-square.png"
+      "icon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
