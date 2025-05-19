@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { StyleSheet, Pressable, Image, ActivityIndicator, ScrollView, SafeAreaView, RefreshControl, TextInput, useColorScheme, Platform, View, Dimensions, Modal, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { router, useRouter } from 'expo-router';
 import { StatusBar } from 'react-native';
@@ -13,6 +13,9 @@ import { getProductGridWidth, getContentWidth } from '@/utils/responsive';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/context/AuthContext';
 import { OptimizedImage } from '@/components/OptimizedImage';
+
+// Define available sort methods
+type SortMethod = 'alphabetical' | 'priceHighToLow' | 'priceLowToHigh';
 
 interface SubCategory {
   id: string;
@@ -66,6 +69,10 @@ export default function ProductScreen() {
   const [tempSelectedSubSubCategory, setTempSelectedSubSubCategory] = useState<string | null>(null);
   const [guestBannerVisible, setGuestBannerVisible] = useState(true);
   const { isGuest } = useAuth();
+  
+  // Add sort state - default to alphabetical
+  const [sortMethod, setSortMethod] = useState<SortMethod>('alphabetical');
+  const [sortModalVisible, setSortModalVisible] = useState(false);
 
   // Function to get category/subcategory/subsubcategory name from ID
   const getCategoryNameById = (categoryId: string | null): string => {
@@ -444,6 +451,64 @@ export default function ProductScreen() {
     guestBannerCloseButton: {
       padding: 4,
     },
+    sortButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 8,
+      marginLeft: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colorScheme === 'dark' ? Colors.dark.secondaryBackground : Colors.light.secondaryBackground,
+      borderWidth: 1,
+      borderColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+      ...(Platform.OS === 'ios' ? {
+        shadowColor: colorScheme === 'dark' ? 'transparent' : '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: colorScheme === 'dark' ? 0 : 0.1,
+        shadowRadius: 2,
+      } : {
+        elevation: colorScheme === 'dark' ? 0 : 2,
+      }),
+    },
+    sortOption: {
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    selectedSortOption: {
+      backgroundColor: colorScheme === 'dark' ? 'rgba(251, 138, 19, 0.2)' : 'rgba(251, 138, 19, 0.1)',
+    },
+    sortOptionText: {
+      fontSize: 16,
+    },
+    selectedSortOptionText: {
+      color: Colors.light.tint,
+      fontWeight: 'bold',
+    },
+    sortModalContainer: {
+      width: '80%',
+      borderRadius: 12,
+      overflow: 'hidden',
+    },
+    sortModalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colorScheme === 'dark' ? Colors.dark.border : Colors.light.border,
+    },
+    currentSortLabel: {
+      fontSize: 12,
+      color: colorScheme === 'dark' ? Colors.dark.textMuted : Colors.light.textMuted,
+      marginRight: 8,
+    },
+    disabledSortOption: {
+      backgroundColor: '#f2f2f2', // Light gray background for disabled items
+    },
+    disabledSortOptionText: {
+      color: '#a0a0a0', // Medium gray text for disabled items
+    },
   });
 
   useEffect(() => {
@@ -485,6 +550,9 @@ export default function ProductScreen() {
         },
         ...sortedCategories
       ]);
+
+      // Preload images for visible products once data is loaded
+      preloadProductImages(products);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -492,19 +560,25 @@ export default function ProductScreen() {
     }
   };
 
-  const getFilteredProducts = () => {
-    // Debug logging
-    if (selectedCategory && selectedCategory !== 'all') {
-      console.log('Filtering by category ID:', selectedCategory);
-      if (selectedSubCategory) {
-        console.log('Filtering by subcategory ID:', selectedSubCategory);
-        if (selectedSubSubCategory) {
-          console.log('Filtering by subsubcategory ID:', selectedSubSubCategory);
-        }
-      }
+  // Function to preload images for optimal performance
+  const preloadProductImages = useCallback((products: Product[]) => {
+    if (!products || products.length === 0) return;
+    
+    // Get first 20 product images to preload (or fewer if there are less products)
+    const imagesToPreload = products
+      .slice(0, 20)
+      .map(product => product.images && product.images[0])
+      .filter(uri => !!uri) as string[];
+    
+    // Use the preload function from OptimizedImage
+    if (imagesToPreload.length > 0) {
+      OptimizedImage.preload(imagesToPreload);
     }
+  }, []);
 
-    return allProducts.filter(product => {
+  const getFilteredProducts = () => {
+    // Filter products as before
+    const filtered = allProducts.filter(product => {
       // First check if search query matches
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
       
@@ -533,6 +607,28 @@ export default function ProductScreen() {
         matchesSearch
       );
     });
+    
+    // Apply sorting based on selected method
+    return sortProducts(filtered);
+  };
+  
+  // Function to sort products based on selected sort method
+  const sortProducts = (products: Product[]) => {
+    // If user is a guest and trying to use price sorting, force alphabetical
+    if (isGuest && (sortMethod === 'priceHighToLow' || sortMethod === 'priceLowToHigh')) {
+      return [...products].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    
+    switch (sortMethod) {
+      case 'alphabetical':
+        return [...products].sort((a, b) => a.name.localeCompare(b.name));
+      case 'priceHighToLow':
+        return [...products].sort((a, b) => b.price - a.price);
+      case 'priceLowToHigh':
+        return [...products].sort((a, b) => a.price - b.price);
+      default:
+        return products;
+    }
   };
 
   const filteredProducts = getFilteredProducts();
@@ -878,6 +974,82 @@ export default function ProductScreen() {
     );
   };
 
+  // Open sort modal
+  const openSortModal = () => {
+    setSortModalVisible(true);
+  };
+
+  // Close sort modal
+  const closeSortModal = () => {
+    setSortModalVisible(false);
+  };
+
+  // Handle sort selection
+  const handleSortSelect = (method: SortMethod) => {
+    // If user is a guest and trying to select price sorting, show sign-up prompt
+    if (isGuest && (method === 'priceHighToLow' || method === 'priceLowToHigh')) {
+      closeSortModal();
+      // Force back to alphabetical
+      setSortMethod('alphabetical');
+      // Show sign-up prompt
+      setGuestBannerVisible(true);
+      return;
+    }
+    
+    setSortMethod(method);
+    closeSortModal();
+  };
+  
+  // Get human-readable name for current sort method
+  const getSortMethodName = (method: SortMethod): string => {
+    switch (method) {
+      case 'alphabetical':
+        return 'Alphabetical (A-Z)';
+      case 'priceHighToLow':
+        return 'Price: High to Low';
+      case 'priceLowToHigh':
+        return 'Price: Low to High';
+      default:
+        return 'Alphabetical (A-Z)';
+    }
+  };
+
+  // Modified function to render product items with optimized image priority
+  const renderProductItem = (product: Product, index: number) => {
+    // Determine image loading priority based on position
+    // First few products get high priority, others get normal
+    const imagePriority = index < 6 ? 'high' : 'normal';
+    
+    return (
+      <Pressable
+        key={product.id}
+        onPress={() => router.push(`/product/${product.id}`)}
+        style={styles.productCard}
+      >
+        {product.images && product.images[0] && (
+          <OptimizedImage
+            uri={product.images[0]}
+            style={styles.productImage}
+            resizeMode="cover"
+            priority={imagePriority}
+          />
+        )}
+        <ThemedText numberOfLines={2} style={styles.productName}>
+          {product.name}
+        </ThemedText>
+        {canSeePrice() ? (
+          <ThemedText style={styles.productPrice}>
+            RM{product.price.toFixed(2)}
+          </ThemedText>
+        ) : (
+          <ThemedText style={styles.contactMessage}>
+            Contact us for price
+          </ThemedText>
+        )}
+      </Pressable>
+    );
+  };
+
   return (
     <ThemedView style={styles.container}>
       <StatusBar 
@@ -921,6 +1093,17 @@ export default function ProductScreen() {
           >
             <Ionicons 
               name="filter" 
+              size={24} 
+              color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
+            />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.sortButton} 
+            onPress={openSortModal}
+            activeOpacity={0.7}
+          >
+            <Ionicons 
+              name="swap-vertical" 
               size={24} 
               color={colorScheme === 'dark' ? Colors.dark.text : Colors.light.text} 
             />
@@ -984,6 +1167,12 @@ export default function ProductScreen() {
             />
           }
         >
+          {/* Current Sort Method Indicator */}
+          <ThemedView style={{flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 16, alignItems: 'center'}}>
+            <ThemedText style={styles.currentSortLabel}>Sorted by:</ThemedText>
+            <ThemedText style={{fontWeight: '500'}}>{getSortMethodName(sortMethod)}</ThemedText>
+          </ThemedView>
+          
           <ThemedView style={styles.productsContainer}>
             {loading ? (
               <ThemedView style={styles.productsContainer}>
@@ -998,33 +1187,7 @@ export default function ProductScreen() {
             ) : filteredProducts.length === 0 ? (
               <ThemedText style={styles.noProducts}>No products found</ThemedText>
             ) : (
-              filteredProducts.map((product) => (
-                <Pressable
-                  key={product.id}
-                  onPress={() => router.push(`/product/${product.id}`)}
-                  style={styles.productCard}
-                >
-                  {product.images && product.images[0] && (
-                    <OptimizedImage
-                      uri={product.images[0]}
-                      style={styles.productImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <ThemedText numberOfLines={2} style={styles.productName}>
-                    {product.name}
-                  </ThemedText>
-                  {canSeePrice() ? (
-                    <ThemedText style={styles.productPrice}>
-                      RM{product.price.toFixed(2)}
-                    </ThemedText>
-                  ) : (
-                    <ThemedText style={styles.contactMessage}>
-                      Contact us for price
-                    </ThemedText>
-                  )}
-                </Pressable>
-              ))
+              filteredProducts.map((product, index) => renderProductItem(product, index))
             )}
           </ThemedView>
         </ScrollView>
@@ -1086,6 +1249,121 @@ export default function ProductScreen() {
                         Apply
                       </ThemedText>
                     </TouchableOpacity>
+                  </ThemedView>
+                </ThemedView>
+              </TouchableWithoutFeedback>
+            </ThemedView>
+          </TouchableWithoutFeedback>
+        </Modal>
+        
+        {/* Sort Modal */}
+        <Modal
+          visible={sortModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={closeSortModal}
+        >
+          <TouchableWithoutFeedback onPress={closeSortModal}>
+            <ThemedView style={styles.modalOverlay}>
+              <TouchableWithoutFeedback onPress={() => {}}>
+                <ThemedView style={styles.sortModalContainer}>
+                  <ThemedText style={styles.sortModalTitle}>Sort Products</ThemedText>
+                  
+                  <ThemedView style={styles.modalContent}>
+                    <TouchableOpacity
+                      style={[
+                        styles.sortOption,
+                        sortMethod === 'alphabetical' && styles.selectedSortOption
+                      ]}
+                      onPress={() => handleSortSelect('alphabetical')}
+                    >
+                      <ThemedText
+                        style={[
+                          styles.sortOptionText,
+                          sortMethod === 'alphabetical' && styles.selectedSortOptionText
+                        ]}
+                      >
+                        Alphabetical (A-Z)
+                      </ThemedText>
+                    </TouchableOpacity>
+                    
+                    {/* Only show price sorting options for non-guest users */}
+                    {!isGuest && (
+                      <>
+                        <TouchableOpacity
+                          style={[
+                            styles.sortOption,
+                            sortMethod === 'priceLowToHigh' && styles.selectedSortOption
+                          ]}
+                          onPress={() => handleSortSelect('priceLowToHigh')}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.sortOptionText,
+                              sortMethod === 'priceLowToHigh' && styles.selectedSortOptionText
+                            ]}
+                          >
+                            Price: Low to High
+                          </ThemedText>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          style={[
+                            styles.sortOption,
+                            sortMethod === 'priceHighToLow' && styles.selectedSortOption
+                          ]}
+                          onPress={() => handleSortSelect('priceHighToLow')}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.sortOptionText,
+                              sortMethod === 'priceHighToLow' && styles.selectedSortOptionText
+                            ]}
+                          >
+                            Price: High to Low
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                    
+                    {/* Show disabled price options with sign-up prompt for guests */}
+                    {isGuest && (
+                      <>
+                        <TouchableOpacity
+                          style={[
+                            styles.sortOption,
+                            styles.disabledSortOption,
+                          ]}
+                          onPress={() => router.push('/(auth)/sign-up')}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.sortOptionText,
+                              styles.disabledSortOptionText,
+                            ]}
+                          >
+                            Price: Low to High (Sign up to access)
+                          </ThemedText>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          style={[
+                            styles.sortOption,
+                            styles.disabledSortOption,
+                          ]}
+                          onPress={() => router.push('/(auth)/sign-up')}
+                        >
+                          <ThemedText
+                            style={[
+                              styles.sortOptionText,
+                              styles.disabledSortOptionText,
+                            ]}
+                          >
+                            Price: High to Low (Sign up to access)
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </ThemedView>
                 </ThemedView>
               </TouchableWithoutFeedback>
