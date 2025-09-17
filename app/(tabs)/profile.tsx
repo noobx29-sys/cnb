@@ -7,6 +7,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/context/AuthContext';
 import { handleSignOut, handleDeleteAccount } from '@/utils/auth';
+import { UserData } from '@/services/firebase';
+import { verifyUserRole } from '@/services/firebase';
 import { useColorScheme } from '@/context/ColorSchemeContext';
 import { Colors } from '@/constants/Colors';
 
@@ -200,7 +202,7 @@ export default function ProfileScreen() {
         <ThemedText>Please sign in to view your profile.</ThemedText>
         <Pressable 
           style={styles.button}
-          onPress={() => router.replace('/(auth)/sign-in')}
+          onPress={() => router.replace('/sign-in')}
         >
           <ThemedText style={styles.buttonText}>Sign In</ThemedText>
         </Pressable>
@@ -225,32 +227,25 @@ export default function ProfileScreen() {
           <ThemedView style={styles.profileSection}>
             <ThemedView style={styles.infoRow} variant="secondary">
               <ThemedText style={styles.label}>Name</ThemedText>
-              <ThemedText style={styles.value}>
-                {userData.firstName && userData.lastName 
-                  ? `${userData.firstName} ${userData.lastName}`
-                  : userData.firstName || userData.lastName || 'Not provided'
-                }
-              </ThemedText>
+              <ThemedText style={styles.value}>{userData.name}</ThemedText>
             </ThemedView>
 
             <ThemedView style={styles.infoRow} variant="secondary">
               <ThemedText style={styles.label}>Email</ThemedText>
-              <ThemedText style={styles.value}>{userData.email || 'Not provided'}</ThemedText>
+              <ThemedText style={styles.value}>{userData.email}</ThemedText>
             </ThemedView>
 
             <ThemedView style={styles.infoRow} variant="secondary">
               <ThemedText style={styles.label}>Role</ThemedText>
-              <ThemedText style={[styles.value, { textTransform: 'capitalize' }]}>
-                {userData.role || 'user'}
-              </ThemedText>
+              <ThemedText style={[styles.value, { textTransform: 'capitalize' }]}>{userData.role}</ThemedText>
             </ThemedView>
 
-            {userData.role === 'admin' && (
+            {userData.role === 'Admin' && (
               <Pressable 
                 style={styles.adminButton}
                 onPress={() => router.push('/admin/users')}
               >
-                <ThemedText style={styles.buttonText}>Admin Dashboard</ThemedText>
+                <ThemedText style={styles.buttonText}>Manage Users</ThemedText>
               </Pressable>
             )}
 

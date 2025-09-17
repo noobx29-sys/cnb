@@ -28,17 +28,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Product, updateProduct, uploadImage, Category, getAllCategories, getAllProducts, getProductById } from '@/services/database';
+import { Product, updateProduct, uploadImage, Category as FirebaseCategory, getAllCategories } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { usePermissions } from '@/hooks/usePermissions';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import { getDocs } from 'firebase/firestore';
+import { productsCollection } from '@/services/firebase';
 import { OptimizedImage } from '@/components/OptimizedImage';
 import { isDesktop, getCarouselWidth } from '@/utils/responsive';
-import { getCurrentUser } from '@/lib/auth';
-import type { AuthUser } from '@/lib/auth';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth } from '@/services/firebase';
+import { User } from '@/services/firebase';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import Slider from '@react-native-community/slider';
@@ -49,6 +53,36 @@ const { width, height } = Dimensions.get('window');
 
 const PRODUCTS_CACHE_KEY = 'products_cache';
 const CACHE_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+
+export async function getAllProducts() {
+  try {
+    // Try to fetch from network first
+    const querySnapshot = await getDocs(productsCollection);
+    const products = querySnapshot.docs.map(doc => doc.data() as Product);
+    
+    // Cache the products locally
+    await AsyncStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      data: products
+    }));
+    
+    return products;
+  } catch (error) {
+    // If network request fails, try to get cached data
+    const cachedData = await AsyncStorage.getItem(PRODUCTS_CACHE_KEY);
+    if (cachedData) {
+      const { timestamp, data } = JSON.parse(cachedData);
+      
+      // Check if cache is still valid
+      if (Date.now() - timestamp < CACHE_EXPIRY_TIME) {
+        return data;
+      }
+    }
+    
+    // If no cache or expired cache, throw error
+    throw error;
+  }
+}
 
 export function NetworkStatus() {
   const [isConnected, setIsConnected] = useState(true);
@@ -79,7 +113,7 @@ export function NetworkStatus() {
 export default function ProductViewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<FirebaseCategory[]>([]);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -90,7 +124,7 @@ export default function ProductViewScreen() {
   const { canSeePrice } = usePermissions();
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(true);
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -373,17 +407,16 @@ export default function ProductViewScreen() {
   };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
-      } catch (error) {
-        console.error('Error checking auth:', error);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(productsCollection, firebaseUser.uid));
+        setUser(userDoc.data() as User);
+      } else {
         setUser(null);
       }
-    };
+    });
 
-    checkAuth();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -401,17 +434,8 @@ export default function ProductViewScreen() {
 
   const loadProduct = async () => {
     try {
-      // Try to get specific product first, fallback to getting all products
-      let foundProduct: Product | null = null;
-      
-      try {
-        foundProduct = await getProductById(id);
-      } catch (error) {
-        console.log('Fallback to getting all products');
-        const products = await getAllProducts();
-        foundProduct = products.find((p: Product) => p.id === id) || null;
-      }
-      
+      const products = await getAllProducts();
+      const foundProduct = products.find((p: Product) => p.id === id);
       if (foundProduct) {
         setProduct(foundProduct);
       } else {
@@ -447,7 +471,7 @@ export default function ProductViewScreen() {
     if (!category || !category.subCategories) {
       return subcategoryId;
     }
-    const subcategory = category.subCategories.find((sub: any) => sub.id === subcategoryId);
+    const subcategory = category.subCategories.find(sub => sub.id === subcategoryId);
     return subcategory ? subcategory.name : subcategoryId;
   };
   
@@ -457,11 +481,11 @@ export default function ProductViewScreen() {
     if (!category || !category.subCategories) {
       return subsubcategoryId;
     }
-    const subcategory = category.subCategories.find((sub: any) => sub.id === subcategoryId);
+    const subcategory = category.subCategories.find(sub => sub.id === subcategoryId);
     if (!subcategory || !subcategory.subCategories) {
       return subsubcategoryId;
     }
-    const subsubcategory = subcategory.subCategories.find((subsub: any) => subsub.id === subsubcategoryId);
+    const subsubcategory = subcategory.subCategories.find(subsub => subsub.id === subsubcategoryId);
     return subsubcategory ? subsubcategory.name : subsubcategoryId;
   };
 
@@ -497,7 +521,7 @@ export default function ProductViewScreen() {
 
         const uploadPromises = result.assets.map(async (image) => {
           try {
-            const imageUrl = await uploadImage(image.uri, `products/${product.id}/${Date.now()}`);
+            const imageUrl = await uploadImage(image.uri);
             return imageUrl;
           } catch (error) {
             console.error('Error uploading image:', error);
@@ -570,9 +594,9 @@ export default function ProductViewScreen() {
       };
   
       // Get category names
-      const categoryName = getCategoryNameById(product.category || product.categoryId);
-      const subcategoryName = product.subcategory ? getSubcategoryNameById(product.category || product.categoryId, product.subcategory) : '';
-      const subsubcategoryName = product.subsubcategory ? getSubsubcategoryNameById(product.category || product.categoryId, product.subcategory, product.subsubcategory) : '';
+      const categoryName = getCategoryNameById(product.category);
+      const subcategoryName = product.subcategory ? getSubcategoryNameById(product.category, product.subcategory) : '';
+      const subsubcategoryName = product.subsubcategory ? getSubsubcategoryNameById(product.category, product.subcategory, product.subsubcategory) : '';
   
       const htmlContent = `
         <html>
@@ -830,21 +854,21 @@ export default function ProductViewScreen() {
                 </ThemedText>
               ) : ( 
                 <ThemedText style={[styles.price, { paddingHorizontal: 16 }]}>
-                RM{parseFloat(product.price).toFixed(2)}
+                RM{product.price.toFixed(2)}
               </ThemedText>
               )}
-              {(product.category || product.categoryId) && (
+              {product.category && (
                 <View style={[styles.categoryContainer, { paddingHorizontal: 16 }]}>
                   <ThemedText style={styles.categoryLabel}>Category:</ThemedText>
                   <View style={styles.categoryPath}>
                     <View style={styles.categoryItemContainer}>
-                      <ThemedText style={styles.categoryItem}>{getCategoryNameById(product.category || product.categoryId)}</ThemedText>
+                      <ThemedText style={styles.categoryItem}>{getCategoryNameById(product.category)}</ThemedText>
                     </View>
                     {product.subcategory && (
                       <>
                         <Ionicons name="chevron-forward" size={16} color={colorScheme === 'dark' ? '#ccc' : '#666'} />
                         <View style={styles.categoryItemContainer}>
-                          <ThemedText style={styles.categoryItem}>{getSubcategoryNameById(product.category || product.categoryId, product.subcategory)}</ThemedText>
+                          <ThemedText style={styles.categoryItem}>{getSubcategoryNameById(product.category, product.subcategory)}</ThemedText>
                         </View>
                       </>
                     )}
@@ -852,7 +876,7 @@ export default function ProductViewScreen() {
                       <>
                         <Ionicons name="chevron-forward" size={16} color={colorScheme === 'dark' ? '#ccc' : '#666'} />
                         <View style={styles.categoryItemContainer}>
-                          <ThemedText style={styles.categoryItem}>{getSubsubcategoryNameById(product.category || product.categoryId, product.subcategory, product.subsubcategory)}</ThemedText>
+                          <ThemedText style={styles.categoryItem}>{getSubsubcategoryNameById(product.category, product.subcategory, product.subsubcategory)}</ThemedText>
                         </View>
                       </>
                     )}

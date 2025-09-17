@@ -1,47 +1,38 @@
+import { getAuth, signOut, deleteUser } from 'firebase/auth';
 import { Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getCurrentUser, deleteUserAccount } from '@/lib/auth';
-import { router } from 'expo-router';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db, usersCollection } from '@/services/firebase';
 
 export async function handleSignOut() {
   try {
-    // Clear stored authentication data
-    await AsyncStorage.multiRemove(['jwt_token', 'user_data', 'is_guest']);
-    
-    // Redirect to sign-in page
-    router.replace('/(auth)/sign-in');
+    const auth = getAuth();
+    await signOut(auth);
+    // The AuthContext will automatically redirect to sign-in
   } catch (error: any) {
-    Alert.alert('Error', 'Failed to sign out. Please try again.');
-    console.error('Sign out error:', error);
+    Alert.alert('Error', error.message);
   }
 } 
 
 export async function handleDeleteAccount() {
   try {
-    const currentUser = await getCurrentUser();
+    const auth = getAuth();
+    const user = auth.currentUser;
     
-    if (!currentUser) {
+    if (!user) {
       throw new Error('No user is currently signed in');
     }
     
-    // Delete user account from database
-    const success = await deleteUserAccount(currentUser.id);
+    // Delete user document from Firestore
+    const userDocRef = doc(usersCollection, user.uid);
+    await deleteDoc(userDocRef);
     
-    if (success) {
-      // Clear stored authentication data
-      await AsyncStorage.multiRemove(['jwt_token', 'user_data', 'is_guest']);
-      
-      // Redirect to sign-in page
-      router.replace('/(auth)/sign-in');
-      
-      Alert.alert('Success', 'Your account has been deleted successfully.');
-      return true;
-    } else {
-      throw new Error('Failed to delete account');
-    }
+    // Delete the user's authentication account
+    await deleteUser(user);
+    
+    // The AuthContext will automatically redirect to sign-in
+    return true;
   } catch (error: any) {
-    Alert.alert('Error', error.message || 'Failed to delete account. Please try again.');
-    console.error('Delete account error:', error);
+    Alert.alert('Error', error.message);
     return false;
   }
 } 

@@ -1,13 +1,14 @@
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput, Pressable, Text, TouchableOpacity, useColorScheme } from 'react-native';
+import { signInWithEmailAndPassword, setPersistence, getReactNativePersistence, sendPasswordResetEmail, signInAnonymously } from 'firebase/auth';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { signIn, signInAsGuest } from '@/lib/auth';
-import { useAuth } from '@/context/AuthContext';
+import { auth, db } from '@/services/firebase';
 import { Colors } from '@/constants/Colors';
 
 export default function SignIn() {
@@ -15,7 +16,6 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const colorScheme = useColorScheme();
-  const { refreshAuth } = useAuth();
 
   const styles = StyleSheet.create({
     container: {
@@ -112,10 +112,20 @@ export default function SignIn() {
   const router = useRouter();
   const handleSignIn = async () => {
     try {
-      const user = await signIn({ email, password });
+      if (!auth) {
+        console.error('Auth is not initialized');
+        return;
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // Check user's role - if it's 'pending', show message
-      if (user.role === 'pending') {
+      // Check user's role in Firestore
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      const userData = userDoc.data();
+      
+      if (userData?.role === 'Pending') {
+        // Sign out the user immediately
+        await auth.signOut();
         Alert.alert(
           'Account Pending Approval',
           'Your account is currently waiting for administrator approval. You will receive an email once your account has been approved.',
@@ -124,33 +134,49 @@ export default function SignIn() {
         return;
       }
       
-      console.log('Sign in successful, user ID:', user.id);
+      console.log('Sign in successful, user ID:', userCredential.user.uid);
       
-      // Refresh auth state to immediately update context
-      await refreshAuth();
-      
-      // Navigate to tabs
-      router.replace('/(tabs)');
+      // Store user data in AsyncStorage
+      await AsyncStorage.setItem('user_email', email);
+      await AsyncStorage.setItem('user_id', userCredential.user.uid);
       
     } catch (error: any) {
       console.error('Sign in error:', error);
-      Alert.alert('Error', error.message || 'An error occurred during sign in');
+      Alert.alert('Error', error.message);
     }
   };
 
   const handleGuestSignIn = async () => {
     try {
-      const guestUser = await signInAsGuest();
-      console.log('Guest sign in successful, user ID:', guestUser.id);
+      if (!auth) {
+        console.error('Auth is not initialized');
+        return;
+      }
+
+      // Sign in anonymously
+      const userCredential = await signInAnonymously(auth);
+      console.log('Guest sign in successful, user ID:', userCredential.user.uid);
       
-      // Refresh auth state to immediately update context
-      await refreshAuth();
+      // Create a guest user document in Firestore
+      const guestUserRef = doc(db, 'users', userCredential.user.uid);
+      await setDoc(guestUserRef, {
+        uid: userCredential.user.uid,
+        email: 'guest@example.com', // Placeholder email
+        name: 'Guest User',
+        role: 'Guest', // Special role for guests
+        createdAt: new Date(),
+        isGuest: true
+      });
       
-      // Navigate to tabs
+      // Store minimal user data in AsyncStorage
+      await AsyncStorage.setItem('user_id', userCredential.user.uid);
+      await AsyncStorage.setItem('is_guest', 'true');
+      
+      // Navigate to the main app
       router.replace('/(tabs)');
     } catch (error: any) {
       console.error('Guest sign in error:', error);
-      Alert.alert('Error', error.message || 'An error occurred during guest sign in');
+      Alert.alert('Error', error.message);
     }
   };
 
@@ -160,13 +186,17 @@ export default function SignIn() {
       return;
     }
 
-    // TODO: Implement password reset functionality with your chosen email service
-    // You can use services like SendGrid, AWS SES, or similar
-    Alert.alert(
-      'Password Reset',
-      'Password reset functionality is not yet implemented. Please contact support for assistance.',
-      [{ text: 'OK' }]
-    );
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Password Reset Email Sent',
+        'Please check your email for instructions to reset your password.',
+        [{ text: 'OK' }]
+      );
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      Alert.alert('Error', error.message);
+    }
   };
 
   return (

@@ -93,14 +93,14 @@ android {
         applicationId 'com.juta.cnb'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion 35
-        versionCode 8
+        versionCode 7
         versionName "1.0.4"
     }
 signingConfigs {
     release {
-        storeFile file("../../my-new-key.keystore")
+        storeFile file("upload-keystore.jks")
         storePassword "123456"
-        keyAlias "my-key-alias"
+        keyAlias "upload"
         keyPassword "123456"
     }
 }

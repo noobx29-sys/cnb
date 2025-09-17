@@ -7,74 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { updatePromotion, deletePromotion, getAllProducts, getAllPromotions } from '@/services/database';
-import { uploadImageToCloudinary } from '@/services/cloudinary';
+import { Promotion, updatePromotion, uploadImage, getPromotionById, deletePromotion, getAllProducts, Product } from '@/services/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: string;
-  categoryId: string | null;
-  category: string | null;
-  subcategory: string | null;
-  subsubcategory: string | null;
-  imageUrl: string | null;
-  images: string[] | null;
-  inStock: boolean;
-  stockQuantity: number | null;
-  isActive: boolean;
-  createdBy: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface Promotion {
-  id?: string;
-  title: string;
-  name?: string; // For backward compatibility
-  description: string | null;
-  discountPercentage: string | null;
-  discountAmount: string | null;
-  discountType?: string; // For backward compatibility
-  discountValue?: number; // For backward compatibility
-  minimumPurchase?: number; // For backward compatibility
-  startDate: Date;
-  endDate: Date;
-  isActive: boolean;
-  active?: boolean; // For backward compatibility
-  imageUrl: string | null;
-  images?: string[]; // For backward compatibility
-  productIds: string[] | null;
-  productId?: string; // For backward compatibility
-  createdBy: string | null;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-// Upload image using Cloudinary
-const uploadImage = async (uri: string, path?: string): Promise<string> => {
-  try {
-    return await uploadImageToCloudinary(uri, path || 'promotions');
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw new Error('Failed to upload image');
-  }
-};
-
-// Helper function to get promotion by ID
-const getPromotionById = async (id: string): Promise<Promotion | null> => {
-  try {
-    const promotions = await getAllPromotions();
-    return promotions.find(p => p.id === id) || null;
-  } catch (error) {
-    console.error('Error getting promotion by ID:', error);
-    return null;
-  }
-};
 
 export default function EditPromotionScreen() {
   const { id } = useLocalSearchParams();
@@ -106,18 +42,17 @@ export default function EditPromotionScreen() {
     try {
       const promotionData = await getPromotionById(id as string);
       if (promotionData) {
-        // Map database fields to component state with backward compatibility
         setPromotion({
           ...promotionData,
-          name: promotionData.title, // Map title to name for backward compatibility
-          images: promotionData.imageUrl ? [promotionData.imageUrl] : [],
-          discountType: promotionData.discountPercentage ? 'percentage' : 'fixed',
-          discountValue: parseFloat(promotionData.discountPercentage || promotionData.discountAmount || '0'),
-          minimumPurchase: 0, // Default value since it's not in current schema
+          images: promotionData.images || [],
+          name: promotionData.name || '',
+          description: promotionData.description || '',
+          discountType: promotionData.discountType || '',
+          discountValue: promotionData.discountValue || 0,
           startDate: new Date(promotionData.startDate),
           endDate: new Date(promotionData.endDate),
-          productId: promotionData.productIds?.[0] || '',
-          active: promotionData.isActive,
+          productId: promotionData.productId || '',
+          active: promotionData.active || false,
         });
       } else {
         Alert.alert('Error', 'Promotion not found');
@@ -126,8 +61,6 @@ export default function EditPromotionScreen() {
     } catch (error: any) {
       Alert.alert('Error', error.message);
       router.back();
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -156,9 +89,9 @@ export default function EditPromotionScreen() {
         return;
       }
 
-      const uploadPromises = result.assets.map(async (image, index) => {
+      const uploadPromises = result.assets.map(async (image) => {
         try {
-          const imageUrl = await uploadImage(image.uri, `promotions/${id}_${Date.now()}_${index}`);
+          const imageUrl = await uploadImage(image.uri);
           return imageUrl;
         } catch (error) {
           console.error('Error uploading image:', error);
@@ -183,15 +116,16 @@ export default function EditPromotionScreen() {
       if (!promotion || !userData) return;
 
       await updatePromotion(promotion.id!, {
-        title: promotion.name || promotion.title,
-        description: promotion.description,
-        discountPercentage: promotion.discountType === 'percentage' ? promotion.discountValue?.toString() || null : null,
-        discountAmount: promotion.discountType === 'fixed' ? promotion.discountValue?.toString() || null : null,
+        name: promotion.name!,
+        description: promotion.description!,
+        discountType: promotion.discountType!,
+        discountValue: promotion.discountValue!,
         startDate: promotion.startDate,
         endDate: promotion.endDate,
-        isActive: promotion.active ?? promotion.isActive,
-        productIds: promotion.productId ? [promotion.productId] : null,
-        imageUrl: promotion.images?.[0] || null,
+        minimumPurchase: promotion.minimumPurchase!,
+        active: promotion.active,
+        productId: promotion.productId,
+        images: promotion.images,
       });
 
       Alert.alert('Success', 'Promotion updated successfully');
@@ -469,7 +403,7 @@ export default function EditPromotionScreen() {
             <ThemedText style={styles.inputLabel}>Description</ThemedText>
             <TextInput
               style={styles.multilineInput}
-              value={promotion.description || ''}
+              value={promotion.description}
               onChangeText={(text) => setPromotion({ ...promotion, description: text })}
               multiline={true}
             />
@@ -511,7 +445,7 @@ export default function EditPromotionScreen() {
             <ThemedText style={styles.inputLabel}>Discount Value</ThemedText>
             <TextInput
               style={styles.input}
-              value={(promotion.discountValue || 0).toString()}
+              value={promotion.discountValue.toString()}
               onChangeText={(text) => setPromotion({ ...promotion, discountValue: parseFloat(text) || 0 })}
               keyboardType="numeric"
             />
@@ -519,7 +453,7 @@ export default function EditPromotionScreen() {
             <ThemedText style={styles.inputLabel}>Minimum Purchase</ThemedText>
             <TextInput
               style={styles.input}
-              value={(promotion.minimumPurchase || 0).toString()}
+              value={promotion.minimumPurchase.toString()}
               onChangeText={(text) => setPromotion({ ...promotion, minimumPurchase: parseFloat(text) || 0 })}
               keyboardType="numeric"
             />
@@ -531,22 +465,11 @@ export default function EditPromotionScreen() {
                 onPress={() => setProductDropdownOpen(!productDropdownOpen)}
               >
                 <ThemedText style={styles.dropdownText}>
-                  {products.find(p => p.id === promotion.productId)?.name || 'Select a product (optional)'}
+                  {products.find(p => p.id === promotion.productId)?.name || 'Select a product'}
                 </ThemedText>
               </Pressable>
               {productDropdownOpen && (
                 <ThemedView style={styles.dropdownMenu}>
-                  <Pressable
-                    style={styles.dropdownMenuItem}
-                    onPress={() => {
-                      setPromotion({ ...promotion, productId: '' });
-                      setProductDropdownOpen(false);
-                    }}
-                  >
-                    <ThemedText style={styles.dropdownMenuItemText}>
-                      None (applies to all products)
-                    </ThemedText>
-                  </Pressable>
                   {products.map((product) => (
                     <Pressable
                       key={product.id}

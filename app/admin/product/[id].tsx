@@ -6,41 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { updateProduct, getAllCategories, getAllProducts, deleteProduct } from '@/services/database';
-import { uploadImageToCloudinary } from '@/services/cloudinary';
+import { Product, updateProduct, uploadImage, getAllCategories, getProductById, deleteProduct } from '@/services/firebase';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 
-interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  price: string;
-  categoryId: string | null;
-  category: string | null;
-  subcategory: string | null;
-  subsubcategory: string | null;
-  imageUrl: string | null;
-  images: string[] | null;
-  inStock: boolean;
-  stockQuantity: number | null;
-  stock?: number; // For backward compatibility
-  isActive: boolean;
-  createdBy: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 interface Category {
-  id: string;
   name: string;
-  description: string | null;
-  imageUrl: string | null;
-  isActive: boolean;
-  subCategories: Subcategory[] | null;
-  createdAt: Date;
-  updatedAt: Date;
+  subCategories?: Subcategory[];
 }
 
 interface Subcategory {
@@ -48,27 +21,6 @@ interface Subcategory {
   id: string;
   subCategories?: Subcategory[];
 }
-
-// Helper function to get product by ID
-const getProductById = async (id: string): Promise<Product | null> => {
-  try {
-    const products = await getAllProducts();
-    return products.find(p => p.id === id) || null;
-  } catch (error) {
-    console.error('Error getting product by ID:', error);
-    return null;
-  }
-};
-
-// Upload image using Cloudinary
-const uploadImage = async (uri: string, path?: string): Promise<string> => {
-  try {
-    return await uploadImageToCloudinary(uri, path || 'products');
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    throw new Error('Failed to upload image');
-  }
-};
 
 export default function EditProductScreen() {
   const { id } = useLocalSearchParams();
@@ -298,7 +250,6 @@ export default function EditProductScreen() {
         setProduct({
           ...productData,
           images: productData.images || [],
-          stock: productData.stockQuantity || 0, // Map stockQuantity to stock for UI compatibility
         });
       } else {
         Alert.alert('Error', 'Product not found');
@@ -313,7 +264,7 @@ export default function EditProductScreen() {
   const loadCategories = async () => {
     try {
       const fetchedCategories = await getAllCategories();
-      setCategories(fetchedCategories);
+      setCategories(fetchedCategories as unknown as Category[]);
     } catch (error) {
       console.error('Error loading categories:', error);
       Alert.alert('Error', 'Failed to load categories');
@@ -335,9 +286,9 @@ export default function EditProductScreen() {
         return;
       }
 
-      const uploadPromises = result.assets.map(async (image, index) => {
+      const uploadPromises = result.assets.map(async (image) => {
         try {
-          const imageUrl = await uploadImage(image.uri, `products/${id}_${Date.now()}_${index}`);
+          const imageUrl = await uploadImage(image.uri);
           return imageUrl;
         } catch (error) {
           console.error('Error uploading image:', error);
@@ -368,8 +319,7 @@ export default function EditProductScreen() {
         subcategory: product.subcategory || null,
         subsubcategory: product.subsubcategory || null,
         price: product.price,
-        stockQuantity: product.stock || 0,
-        inStock: (product.stock || 0) > 0,
+        stock: product.stock,
         images: product.images,
       });
 
@@ -440,7 +390,7 @@ export default function EditProductScreen() {
           <ThemedText style={styles.inputLabel}>Description</ThemedText>
           <TextInput
             style={styles.multilineInput}
-            value={product.description || ''}
+            value={product.description}
             onChangeText={(text) => setProduct({ ...product, description: text })}
             multiline={true}
           />
@@ -474,7 +424,7 @@ export default function EditProductScreen() {
             )}
           </ThemedView>
 
-          {product.category && ((categories.find(c => c.name === product.category)?.subCategories ?? [])?.length || 0) > 0 && (
+          {product.category && (categories.find(c => c.name === product.category)?.subCategories ?? []).length > 0 && (
             <ThemedView style={styles.dropdownContainer}>
               <ThemedText style={styles.dropdownLabel}>Subcategory</ThemedText>
               <Pressable
@@ -512,11 +462,11 @@ export default function EditProductScreen() {
               )}
             </ThemedView>
           )}
-          {product.subcategory && ((categories
+          {product.subcategory && (categories
             .find(c => c.name === product.category)
             ?.subCategories
             ?.find(s => s.name === product.subcategory)
-            ?.subCategories ?? [])?.length || 0) > 0 && (
+            ?.subCategories ?? []).length > 0 && (
             <ThemedView style={styles.dropdownContainer}>
               <ThemedText style={styles.dropdownLabel}>Sub-subcategory</ThemedText>
               <Pressable
@@ -558,8 +508,8 @@ export default function EditProductScreen() {
           <ThemedText style={styles.inputLabel}>Price</ThemedText>
           <TextInput
             style={styles.input}
-            value={product.price}
-            onChangeText={(text) => setProduct({ ...product, price: text })}
+            value={product.price.toString()}
+            onChangeText={(text) => setProduct({ ...product, price: parseFloat(text) || 0 })}
             keyboardType="numeric"
           />
           <ThemedText style={styles.inputLabel}>Stock</ThemedText>
