@@ -22,7 +22,7 @@
 ### Company Information
 - **Company**: Newtex Carpets Sdn Bhd
 - **App Version**: 1.0.3
-- **Bundle ID**: com.cnb.app
+- **Bundle ID**: com.juta.cnb
 - **Platform**: iOS and Android
 
 ## Features
@@ -468,7 +468,7 @@ gs://cnb-app-f2ed6.firebasestorage.app/
 ```json
 {
   "ios": {
-    "bundleIdentifier": "com.cnb.app",
+    "bundleIdentifier": "com.juta.cnb",
     "buildNumber": "6",
     "supportsTablet": true,
     "infoPlist": {
@@ -483,7 +483,7 @@ gs://cnb-app-f2ed6.firebasestorage.app/
 ```json
 {
   "android": {
-    "package": "com.cnb.app",
+    "package": "com.juta.cnb",
     "versionCode": 2,
     "permissions": [
       "android.permission.ACCESS_COARSE_LOCATION",

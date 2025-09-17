@@ -16,14 +16,33 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
+    async function prepare() {
+      try {
+        // Wait for fonts to load
+        if (loaded) {
+          // Add a small delay to ensure everything is ready
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setAppIsReady(true);
+        }
+      } catch (e) {
+        console.warn('Error preparing app:', e);
+        setAppIsReady(true); // Continue anyway
+      }
     }
+
+    prepare();
   }, [loaded]);
 
-  if (!loaded) {
+  useEffect(() => {
+    if (appIsReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  if (!appIsReady) {
     return null;
   }
 

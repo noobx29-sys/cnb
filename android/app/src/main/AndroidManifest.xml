@@ -30,7 +30,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="cnb"/>
-        <data android:scheme="com.cnb.app"/>
+        <data android:scheme="com.juta.cnb"/>
         <data android:scheme="exp+cnb"/>
       </intent-filter>
     </activity>
