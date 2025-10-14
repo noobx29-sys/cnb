@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react';
 import { StyleSheet, Pressable, TextInput, Alert, SafeAreaView, useColorScheme, Platform, StatusBar, View, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Category as FirebaseCategory, createCategory, deleteCategory, getAllCategories, deleteSubcategory, updateCategory } from '@/services/firebase';
+import { createCategory, deleteCategory, getAllCategories, updateCategory } from '@/services/database';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
@@ -21,8 +19,12 @@ interface SubCategory {
 interface Category {
   id: string;
   name: string;
-  subCategories: SubCategory[];
+  description: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  subCategories: SubCategory[] | null;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const styles = StyleSheet.create({
@@ -179,49 +181,16 @@ export default function AdminCategoriesScreen() {
       }
 
       if (selectedParentId) {
-        // Find if this is a main category or subcategory
-        const mainCategory = categories.find(cat => cat.id === selectedParentId);
-        if (mainCategory) {
-          // Adding to main category
-          const newSubCategory = {
-            id: Date.now().toString(),
-            name: newCategoryName.trim(),
-            subCategories: []
-          };
-          
-          await updateCategory(selectedParentId, {
-            subCategories: [...(mainCategory.subCategories || []), newSubCategory]
-          });
-        } else {
-          // Find the parent category and subcategory
-          for (const category of categories) {
-            const parentSubCategory = category.subCategories?.find(sub => sub.id === selectedParentId);
-            if (parentSubCategory) {
-              const newSubSubCategory = {
-                id: Date.now().toString(),
-                name: newCategoryName.trim()
-              };
-
-              const updatedSubCategories = category.subCategories.map(sub => {
-                if (sub.id === selectedParentId) {
-                  return {
-                    ...sub,
-                    subCategories: [...(sub.subCategories || []), newSubSubCategory]
-                  };
-                }
-                return sub;
-              });
-
-              await updateCategory(category.id, {
-                subCategories: updatedSubCategories
-              });
-              break;
-            }
-          }
-        }
+        // For now, we'll create subcategories as separate categories with parent reference
+        // This can be enhanced later when subcategory relationships are properly implemented
+        Alert.alert('Info', 'Subcategory creation will be enhanced in the next update. Please create main categories for now.');
+        setSelectedParentId(null);
+        return;
       } else {
         // Create main category
-        await createCategory(newCategoryName.trim());
+        await createCategory({
+          name: newCategoryName.trim()
+        });
       }
 
       setNewCategoryName('');
@@ -243,32 +212,9 @@ export default function AdminCategoriesScreen() {
 
   const handleDeleteSubcategory = async (categoryId: string, subcategoryId: string) => {
     try {
-      const category = categories.find(cat => cat.id === categoryId);
-      if (category) {
-        // First check if it's a direct subcategory
-        const isDirectSubcategory = category.subCategories.some(sub => sub.id === subcategoryId);
-        
-        if (isDirectSubcategory) {
-          // Handle direct subcategory deletion
-          const updatedSubCategories = category.subCategories.filter(
-            sub => sub.id !== subcategoryId
-          );
-          await updateCategory(categoryId, { subCategories: updatedSubCategories });
-        } else {
-          // Handle sub-subcategory deletion
-          const updatedSubCategories = category.subCategories.map(sub => {
-            if (sub.subCategories?.some(subsub => subsub.id === subcategoryId)) {
-              return {
-                ...sub,
-                subCategories: sub.subCategories.filter(subsub => subsub.id !== subcategoryId)
-              };
-            }
-            return sub;
-          });
-          await updateCategory(categoryId, { subCategories: updatedSubCategories });
-        }
-        loadCategories();
-      }
+      // For now, subcategory deletion is simplified
+      // This will be enhanced when proper subcategory relationships are implemented
+      Alert.alert('Info', 'Subcategory deletion will be enhanced in the next update.');
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -285,7 +231,7 @@ export default function AdminCategoriesScreen() {
     };
 
     return categories.map(category => {
-      const hasSubCategories = category.subCategories?.length > 0;
+      const hasSubCategories = (category.subCategories?.length || 0) > 0;
       const isExpanded = expandedCategories[category.id];
 
       return (
@@ -304,11 +250,6 @@ export default function AdminCategoriesScreen() {
               <ThemedText style={styles.categoryName}>{category.name}</ThemedText>
             </View>
             <View style={styles.categoryActions}>
-              <Pressable
-                style={styles.addSubcategoryButton}
-                onPress={() => setSelectedParentId(category.id)}>
-                <ThemedText style={styles.actionButtonText}>Add Sub</ThemedText>
-              </Pressable>
               <Pressable
                 style={styles.deleteButton}
                 onPress={() => handleDeleteCategory(category.id)}>
@@ -339,11 +280,6 @@ export default function AdminCategoriesScreen() {
                     </ThemedText>
                   </View>
                   <View style={styles.categoryActions}>
-                    <Pressable
-                      style={styles.addSubcategoryButton}
-                      onPress={() => setSelectedParentId(subCategory.id)}>
-                      <ThemedText style={styles.actionButtonText}>Add Sub</ThemedText>
-                    </Pressable>
                     <Pressable
                       style={styles.deleteButton}
                       onPress={() => handleDeleteSubcategory(category.id, subCategory.id)}>
@@ -396,10 +332,21 @@ export default function AdminCategoriesScreen() {
               style={styles.button}
               onPress={handleCreateCategory}>
               <ThemedText style={styles.buttonText}>
-                {selectedParentId ? 'Add Subcategory' : 'Add Category'}
+                Add Category
               </ThemedText>
             </Pressable>
           </View>
+
+          <ThemedView style={{ marginBottom: 20 }}>
+            <ThemedText style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+              Categories ({categories.length})
+            </ThemedText>
+            {categories.length === 0 && (
+              <ThemedText style={{ fontStyle: 'italic', color: '#666' }}>
+                No categories found. Create your first category above.
+              </ThemedText>
+            )}
+          </ThemedView>
 
           <View style={styles.categoriesList}>
             {renderCategories()}

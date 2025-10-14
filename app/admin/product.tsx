@@ -6,22 +6,58 @@ import { Picker } from '@react-native-picker/picker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Product, createProduct, deleteProduct, getAllProducts, uploadImage, getAllCategories } from '@/services/firebase';
+import { createProduct, deleteProduct, getAllProducts, getAllCategories } from '@/services/database';
+import { uploadImageToCloudinary } from '@/services/cloudinary';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  categoryId: string | null;
+  category: string | null;
+  subcategory: string | null;
+  subsubcategory: string | null;
+  imageUrl: string | null;
+  images: string[] | null;
+  inStock: boolean;
+  stockQuantity: number | null;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  subCategories: Subcategory[] | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Subcategory {
+  id: string;
   name: string;
   subCategories?: Subcategory[];
 }
 
-interface Subcategory {
-  name: string;
-  id: string;
-  subCategories?: Subcategory[];
-}
+// Upload image using Cloudinary
+const uploadImage = async (uri: string, path?: string): Promise<string> => {
+  try {
+    return await uploadImageToCloudinary(uri, path || 'products');
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw new Error('Failed to upload image');
+  }
+};
 
 export default function AdminProductsScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -35,7 +71,7 @@ export default function AdminProductsScreen() {
     subcategory: '',
     subsubcategory: '',
   });
-  const [categories, setCategories] = useState<Array<{name: string, subCategories?: Subcategory[]}>>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const { userData } = useAuth();
   const { canManageProducts } = usePermissions();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -241,16 +277,16 @@ export default function AdminProductsScreen() {
   const loadProducts = async () => {
     try {
       console.log('Attempting to load products with user:', userData);  // Debug log
-      if (!userData?.role) {
-        throw new Error('User role not found');
+      if (!userData?.id) {
+        throw new Error('User not authenticated');
       }
       const allProducts = await getAllProducts();
       setProducts(allProducts);
     } catch (error: any) {
       console.error('Detailed error:', error);  // Debug log
       Alert.alert(
-        'Permission Error',
-        `Error: ${error.message}`
+        'Error',
+        `Failed to load products: ${error.message}`
       );
       router.replace('/(tabs)');
     }
@@ -304,9 +340,9 @@ export default function AdminProductsScreen() {
     try {
       if (!userData) return;
 
-      const uploadPromises = newProduct.images.map(async (image) => {
+      const uploadPromises = newProduct.images.map(async (image, index) => {
         try {
-          const imageUrl = await uploadImage(image.uri);
+          const imageUrl = await uploadImage(image.uri, `products/${Date.now()}_${index}`);
           if (!imageUrl) throw new Error('Failed to upload image');
           return imageUrl;
         } catch (error) {
@@ -323,8 +359,9 @@ export default function AdminProductsScreen() {
         category: newProduct.category,
         subcategory: newProduct.subcategory || null,
         subsubcategory: newProduct.subsubcategory || null,
-        price: parseFloat(newProduct.price),
-        stock: parseInt(newProduct.stock),
+        price: newProduct.price,
+        stockQuantity: parseInt(newProduct.stock),
+        inStock: parseInt(newProduct.stock) > 0,
         images: imageUrls,
       });
 
@@ -572,6 +609,29 @@ export default function AdminProductsScreen() {
                 <Pressable style={styles.button} onPress={handleCreateProduct}>
                 <ThemedText style={styles.buttonText}>Add Product</ThemedText>
                 </Pressable>
+            </ThemedView>
+
+            {/* Existing Products */}
+            <ThemedView style={styles.header}>
+                <ThemedText type="title">Existing Products ({products.length})</ThemedText>
+            </ThemedView>
+            
+            <ThemedView style={styles.form}>
+                {products.map((product) => (
+                    <ThemedView key={product.id} style={styles.dropdown}>
+                        <ThemedText style={styles.dropdownText}>{product.name}</ThemedText>
+                        <ThemedText style={styles.nestedItem}>
+                            Price: ${product.price} | Stock: {product.stockQuantity || 0} | 
+                            Status: {product.inStock ? 'In Stock' : 'Out of Stock'}
+                        </ThemedText>
+                        <Pressable 
+                            style={styles.deleteButton} 
+                            onPress={() => handleDeleteProduct(product.id)}
+                        >
+                            <ThemedText style={styles.buttonText}>Delete</ThemedText>
+                        </Pressable>
+                    </ThemedView>
+                ))}
             </ThemedView>
         </ScrollView>
     </SafeAreaView>

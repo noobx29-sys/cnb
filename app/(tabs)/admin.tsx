@@ -5,10 +5,57 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Product, Category, getAllProducts, getAllCategories, getAllPromotions } from '@/services/firebase';
+import { getAllProducts, getAllCategories, getAllPromotions } from '@/services/database';
 import { router } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  categoryId: string | null;
+  category: string | null;
+  subcategory: string | null;
+  subsubcategory: string | null;
+  imageUrl: string | null;
+  images: string[] | null;
+  inStock: boolean;
+  stockQuantity: number | null;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  subCategories: any[] | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface Promotion {
+  id: string;
+  title: string;
+  name?: string; // For backward compatibility
+  description: string | null;
+  discountPercentage: string | null;
+  discountAmount: string | null;
+  startDate: Date;
+  endDate: Date;
+  isActive: boolean;
+  imageUrl: string | null;
+  productIds: string[] | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function Admin() {
   const { canManageProducts } = usePermissions();
@@ -16,7 +63,7 @@ export default function Admin() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [promotions, setPromotions] = useState<any[]>([]); // Quick fix
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const insets = useSafeAreaInsets();
 
   const styles = StyleSheet.create({
@@ -122,7 +169,9 @@ export default function Admin() {
         getAllCategories(),
         getAllPromotions(),
       ]);
-      console.log('Loaded promotions:', promotionsData);
+      
+      console.log(`Loaded ${productsData.length} products, ${categoriesData.length} categories, ${promotionsData.length} promotions`);
+      
       setProducts(productsData);
       setCategories(categoriesData);
       setPromotions(promotionsData);
@@ -133,7 +182,7 @@ export default function Admin() {
     }
   };
 
-  if (!canManageProducts) {
+  if (!canManageProducts()) {
     return (
       <ThemedView style={styles.container}>
         <ThemedText>You don't have permission to access this page.</ThemedText>

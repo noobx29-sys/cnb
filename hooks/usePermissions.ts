@@ -4,24 +4,27 @@ export function usePermissions() {
   const { userData } = useAuth();
 
   const canManageProducts = () => {
-    return userData?.role === 'Admin' || userData?.role === 'Manager';
+    const role = userData?.role?.toLowerCase();
+    return role === 'admin' || role === 'manager';
   };
 
   const canManagePromotions = () => {
-    return userData?.role === 'Admin' || userData?.role === 'Manager';
+    const role = userData?.role?.toLowerCase();
+    return role === 'admin' || role === 'manager';
   };
 
   const canManageUsers = () => {
     console.log('Current user role:', userData?.role);
-    return userData?.role === 'Admin';
+    return userData?.role?.toLowerCase() === 'admin';
   };
 
   const canSeePrice = () => {
-    return userData?.role === 'Admin' || userData?.role === 'Manager' || userData?.role === 'User - Price';
+    const role = userData?.role?.toLowerCase();
+    return role === 'admin' || role === 'manager' || userData?.role === 'User - Price';
   };
 
   const isGuest = () => {
-    return userData?.role === 'Guest';
+    return userData?.role?.toLowerCase() === 'guest';
   };
 
   const canAccessFeature = (feature: 'products' | 'categories' | 'contact' | 'profile' | 'cart' | 'checkout') => {

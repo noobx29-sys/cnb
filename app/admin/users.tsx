@@ -5,18 +5,16 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Modal from 'react-native-modal';
 import { Searchbar } from 'react-native-paper';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
 import { Picker } from '@react-native-picker/picker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/context/AuthContext';
-import { getAllUsers, updateUserRole, UserData } from '@/services/firebase';
+import { getAllUsers, updateUserRole, User as UserData } from '@/services/database';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 
-type UserRole = 'Admin' | 'Manager' | 'User - Price' | 'User - No Price' | 'Pending';
+type UserRole = 'admin' | 'manager' | 'user_price' | 'user_no_price' | 'pending';
 
 export default function AdminUsersScreen() {
   const [users, setUsers] = useState<UserData[]>([]);
@@ -165,7 +163,7 @@ export default function AdminUsersScreen() {
     },
   }); 
 
-  const roleOptions: UserRole[] = ['Admin', 'Manager', 'User - Price', 'User - No Price', 'Pending'];
+  const roleOptions: UserRole[] = ['admin', 'manager', 'user_price', 'user_no_price', 'pending'];
 
   useEffect(() => {
     console.log('Current user data:', userData);
@@ -211,7 +209,7 @@ export default function AdminUsersScreen() {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     const filtered = users.filter(user => 
-      user.name.toLowerCase().includes(query.toLowerCase()) ||
+      `${user.firstName} ${user.lastName}`.toLowerCase().includes(query.toLowerCase()) ||
       user.email.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredUsers(filtered);
@@ -220,13 +218,13 @@ export default function AdminUsersScreen() {
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     try {
       // Don't allow non-admins to change roles
-      if (userData?.role !== 'Admin') {
+      if (userData?.role !== 'admin') {
         Alert.alert('Error', 'Only administrators can modify user roles');
         return;
       }
 
       // Don't allow admins to remove their own admin role
-      if (userId === userData.uid && newRole !== 'Admin') {
+      if (userId === userData.id && newRole !== 'admin') {
         const confirmed = await new Promise((resolve) => {
           Alert.alert(
             'Warning',
@@ -241,42 +239,11 @@ export default function AdminUsersScreen() {
         if (!confirmed) return;
       }
 
-      // Get the user's current data to check if they're moving from Pending status
-      const userRef = doc(db, 'users', userId);
-      const userSnapshot = await getDoc(userRef);
-      const currentUserData = userSnapshot.data();
-      const isPendingToActive = currentUserData?.role === 'Pending' && newRole !== 'Pending';
-
       // Update the user's role
-      await updateDoc(userRef, {
-        role: newRole,
-        updatedAt: new Date()
-      });
-
-      // If the user was pending and is now being activated, trigger the email notification
-      if (isPendingToActive) {
-        try {
-          // For now, we'll just show an alert that we need to set up Firebase Cloud Functions
-          console.log('User activated:', {
-            userId,
-            email: currentUserData?.email,
-            newRole
-          });
-          Alert.alert(
-            'Note',
-            'Email notification system needs to be set up with Firebase Cloud Functions to send activation emails.'
-          );
-        } catch (error) {
-          console.error('Error sending activation email:', error);
-        }
-      }
-
+      await updateUserRole(userId, newRole);
+      
+      // Reload users to get updated data
       await loadUsers();
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.uid === userId ? { ...user, role: newRole } : user
-        )
-      );
       
       Alert.alert('Success', 'User role updated successfully');
     } catch (error: any) {
@@ -294,7 +261,7 @@ export default function AdminUsersScreen() {
       }}
     >
       <ThemedView style={styles.userInfo}>
-        <ThemedText style={styles.userName}>{user.name}</ThemedText>
+        <ThemedText style={styles.userName}>{`${user.firstName} ${user.lastName}`}</ThemedText>
         <ThemedText style={styles.userEmail}>{user.email}</ThemedText>
       </ThemedView>
       <ThemedView style={styles.roleButton}>
@@ -341,12 +308,12 @@ export default function AdminUsersScreen() {
           backdropTransitionOutTiming={0}
         >
           <ThemedView style={styles.modalContent}>
-            <ThemedText style={[styles.modalTitle, { marginBottom: 8 }]}>{selectedUser?.name}</ThemedText>
+            <ThemedText style={[styles.modalTitle, { marginBottom: 8 }]}>{selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : ''}</ThemedText>
             <Picker
               selectedValue={selectedUser?.role}
               onValueChange={(value) => {
                 if (selectedUser) {
-                  handleRoleChange(selectedUser.uid, value as UserRole);
+                  handleRoleChange(selectedUser.id, value as UserRole);
                   setIsRoleModalVisible(false);
                 }
               }}

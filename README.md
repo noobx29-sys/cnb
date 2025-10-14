@@ -1,19 +1,36 @@
-# Welcome to your Expo app 👋
+# CNB - React Native E-commerce App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This is a React Native e-commerce application built with Expo, featuring user authentication, product catalog, and admin management.
 
-## Get started
+## 🔄 Recent Migration: Firebase → NeonDB
 
-1. Install dependencies
+This app has been migrated from Firebase to NeonDB (PostgreSQL). See [MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md) for details.
+
+## 🚀 Quick Start
+
+1. **Install dependencies**
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. **Set up environment variables**
 
    ```bash
-    npx expo start
+   cp .env.example .env
+   # Edit .env with your NeonDB connection string and JWT secret
+   ```
+
+3. **Set up database**
+
+   ```bash
+   npm run db:push
+   ```
+
+4. **Start the app**
+
+   ```bash
+   npm start
    ```
 
 In the output, you'll find options to open the app in a

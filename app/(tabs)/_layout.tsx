@@ -22,7 +22,7 @@ export default function TabLayout() {
     console.log('Auth state:', {
       role: userData?.role,
       loading,
-      isAdmin: userData?.role === 'Admin',
+      isAdmin: userData?.role === 'admin',
       isGuest,
       fullUserData: userData
     });
@@ -32,7 +32,7 @@ export default function TabLayout() {
     return null;
   }
 
-  const isAdmin = userData?.role === 'Admin';
+  const isAdmin = userData?.role === 'admin';
 
   console.log('Is admin?:', isAdmin, 'Is guest?:', isGuest);
 

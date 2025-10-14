@@ -1,10 +1,10 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, TextInput, Pressable, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { Alert } from 'react-native';
 import { router } from 'expo-router';
-import { auth, createUserDocument } from '@/services/firebase';
+import { signUp } from '@/lib/auth';
+import { useAuth } from '@/context/AuthContext';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -20,6 +20,7 @@ export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const colorScheme = useColorScheme();
+  const { refreshAuth } = useAuth();
 
   const styles = StyleSheet.create({
     container: {
@@ -101,23 +102,18 @@ export default function SignUp() {
     }
 
     try {
-      if (!auth) {
-        console.error('Auth is not initialized');
-        return;
-      }
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Split full name into first and last name
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
       
-      await createUserDocument({
-        uid: userCredential.user.uid,
-        email: email,
-        name: name,
-        companyName: companyName,
-        fullName: fullName,
-        role: 'Pending',
+      const user = await signUp({
+        email,
+        password,
+        firstName,
+        lastName,
+        role: 'pending', // Set to pending for admin approval
       });
-
-      // Sign out the user immediately since they're pending
-      await auth.signOut();
 
       Alert.alert(
         'Account Created',
@@ -125,12 +121,13 @@ export default function SignUp() {
         [
           {
             text: 'OK',
-            onPress: () => router.replace('/sign-in')
+            onPress: () => router.replace('/(auth)/sign-in')
           }
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      console.error('Sign up error:', error);
+      Alert.alert('Error', error.message || 'An error occurred during registration');
     }
   };
 

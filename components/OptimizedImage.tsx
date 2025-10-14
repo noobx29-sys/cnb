@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import FastImage from 'react-native-fast-image';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Image, ImageResizeMode } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
 interface OptimizedImageProps {
   uri: string;
   style: any;
-  resizeMode?: 'cover' | 'contain' | 'stretch' | 'center';
+  resizeMode?: ImageResizeMode;
   placeholder?: React.ReactNode;
   onLoad?: () => void;
-  priority?: 'low' | 'normal' | 'high';
+  priority?: 'low' | 'normal' | 'high'; // Note: priority is not used in standard Image component
 }
 
 export function OptimizedImage({
@@ -22,6 +21,7 @@ export function OptimizedImage({
   ...rest
 }: OptimizedImageProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   if (!uri) {
     return placeholder || (
@@ -31,68 +31,54 @@ export function OptimizedImage({
     );
   }
 
-  // Convert resizeMode to FastImage constants
-  const fastImageResizeMode = {
-    'cover': FastImage.resizeMode.cover,
-    'contain': FastImage.resizeMode.contain,
-    'stretch': FastImage.resizeMode.stretch,
-    'center': FastImage.resizeMode.center,
-  }[resizeMode];
-
-  // Convert priority string to FastImage constants
-  const fastImagePriority = {
-    'low': FastImage.priority.low,
-    'normal': FastImage.priority.normal,
-    'high': FastImage.priority.high,
-  }[priority];
-
-  // Generate a downsized thumbnail URL for faster initial loading (if using Firebase Storage)
-  const getThumbnailUrl = (url: string) => {
-    // Check if it's a Firebase Storage URL
-    if (url.includes('firebasestorage.googleapis.com')) {
-      // Add _256x256 or appropriate size parameter based on your implementation
-      // This is just a placeholder - actual implementation depends on your storage setup
-      return url;
-    }
-    return url;
+  const handleLoadStart = () => {
+    setIsLoading(true);
+    setHasError(false);
   };
 
-  const handleLoad = () => {
+  const handleLoadEnd = () => {
     setIsLoading(false);
-    if (onLoad) onLoad();
+    onLoad?.();
   };
+
+  const handleError = () => {
+    setIsLoading(false);
+    setHasError(true);
+  };
+
+  if (hasError) {
+    return placeholder || (
+      <View style={[style, styles.placeholderContainer]}>
+        <ActivityIndicator size="large" color="#FB8A13" />
+      </View>
+    );
+  }
 
   return (
     <View style={style}>
+      <Image
+        source={{ uri }}
+        style={style}
+        resizeMode={resizeMode}
+        onLoadStart={handleLoadStart}
+        onLoadEnd={handleLoadEnd}
+        onError={handleError}
+        {...rest}
+      />
       {isLoading && (
-        <View style={[StyleSheet.absoluteFill, styles.placeholderContainer]}>
+        <View style={[StyleSheet.absoluteFill, styles.loadingOverlay]}>
           <ActivityIndicator size="small" color="#FB8A13" />
         </View>
       )}
-      <FastImage
-        source={{ 
-          uri,
-          priority: fastImagePriority,
-          cache: FastImage.cacheControl.immutable
-        }}
-        style={style}
-        resizeMode={fastImageResizeMode}
-        onLoad={handleLoad}
-        onLoadEnd={handleLoad}
-        {...rest}
-      />
     </View>
   );
 }
 
-// Preload multiple images
+// Preload multiple images (simplified version without FastImage)
 OptimizedImage.preload = (uris: string[]) => {
-  const sources = uris.map(uri => ({
-    uri,
-    priority: FastImage.priority.high,
-  }));
-  
-  FastImage.preload(sources);
+  // Standard Image component doesn't have preload functionality
+  // This is a placeholder for API compatibility
+  console.log('Image preload requested for:', uris.length, 'images');
 };
 
 const styles = StyleSheet.create({
@@ -100,5 +86,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
+  },
+  loadingOverlay: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
   }
 }); 

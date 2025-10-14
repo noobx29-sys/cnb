@@ -5,7 +5,7 @@ import { StatusBar } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Product, getAllProducts, getAllCategories } from '@/services/firebase';
+import { getAllProducts, getAllCategories } from '@/services/database';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +13,25 @@ import { getProductGridWidth, getContentWidth } from '@/utils/responsive';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/context/AuthContext';
 import { OptimizedImage } from '@/components/OptimizedImage';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  categoryId: string | null;
+  category: string | null;
+  subcategory: string | null;
+  subsubcategory: string | null;
+  imageUrl: string | null;
+  images: string[] | null;
+  inStock: boolean;
+  stockQuantity: number | null;
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 // Define available sort methods
 type SortMethod = 'alphabetical' | 'priceHighToLow' | 'priceLowToHigh';
@@ -31,10 +50,14 @@ interface SubCategory {
 interface Category {
   id: string;
   name: string;
-  parentId: string | null;
-  path: string[];
-  subCategories: SubCategory[];
+  description: string | null;
+  imageUrl: string | null;
+  isActive: boolean;
+  parentId?: string | null;
+  path?: string[];
+  subCategories: SubCategory[] | null;
   createdAt: Date;
+  updatedAt: Date;
   order?: number;
 }
 
@@ -45,10 +68,14 @@ export default function ProductScreen() {
     { 
       id: 'all', 
       name: 'All Products',
+      description: null,
+      imageUrl: null,
+      isActive: true,
       parentId: null,
       path: [],
       subCategories: [],
       createdAt: new Date(),
+      updatedAt: new Date(),
       order: -1
     }
   ]);
@@ -527,10 +554,14 @@ export default function ProductScreen() {
       const transformedCategories = fetchedCategories.map((cat: any, index: number) => ({
         id: cat.id,
         name: cat.name,
+        description: cat.description,
+        imageUrl: cat.imageUrl,
+        isActive: cat.isActive,
         parentId: null,
         path: [],
         subCategories: cat.subCategories || [],
         createdAt: cat.createdAt,
+        updatedAt: cat.updatedAt,
         order: cat.order !== undefined ? cat.order : index // Use order if available, otherwise use index
       }));
       
@@ -542,10 +573,14 @@ export default function ProductScreen() {
         { 
           id: 'all', 
           name: 'All Products',
+          description: null,
+          imageUrl: null,
+          isActive: true,
           parentId: null,
           path: [],
           subCategories: [],
           createdAt: new Date(),
+          updatedAt: new Date(),
           order: -1
         },
         ...sortedCategories
@@ -577,33 +612,61 @@ export default function ProductScreen() {
   }, []);
 
   const getFilteredProducts = () => {
-    // Filter products as before
+    // Filter products - guest users can only see active products
     const filtered = allProducts.filter(product => {
+      // Guest users restriction
+      if (isGuest && !product.isActive) {
+        return false;
+      }
+
       // First check if search query matches
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()));
       
       // If no category is selected (All Products), only filter by search
       if (!selectedCategory || selectedCategory === 'all') {
         return matchesSearch;
       }
       
+      // Get the selected category data to match by name as well as ID
+      const selectedCategoryData = categories.find(cat => cat.id === selectedCategory);
+      const selectedCategoryName = selectedCategoryData?.name;
+      
+      // Check if product matches the selected category (by ID or name)
+      const matchesCategory = product.categoryId === selectedCategory || 
+                             (selectedCategoryName && product.category === selectedCategoryName);
+      
       // If only category is selected (no subcategory), show all products in that category
       if (!selectedSubCategory) {
-        return product.category === selectedCategory && matchesSearch;
+        return matchesCategory && matchesSearch;
       }
+      
+      // For subcategory filtering, we need to get the subcategory name
+      const selectedSubCategoryData = selectedCategoryData?.subCategories?.find(sub => sub.id === selectedSubCategory);
+      const selectedSubCategoryName = selectedSubCategoryData?.name;
       
       // If subcategory is selected but no sub-subcategory, show all products in that subcategory
       if (!selectedSubSubCategory) {
-        return product.category === selectedCategory && 
-               product.subcategory === selectedSubCategory && 
-               matchesSearch;
+        const matchesSubCategory = product.subcategory === selectedSubCategory || 
+                                 (selectedSubCategoryName && product.subcategory === selectedSubCategoryName);
+        return matchesCategory && matchesSubCategory && matchesSearch;
       }
       
+      // For sub-subcategory filtering
+      const selectedSubSubCategoryData = selectedSubCategoryData?.subCategories?.find(subSub => subSub.id === selectedSubSubCategory);
+      const selectedSubSubCategoryName = selectedSubSubCategoryData?.name;
+      
       // If sub-subcategory is selected, only show products in that specific sub-subcategory
+      const matchesSubSubCategory = product.subsubcategory === selectedSubSubCategory ||
+                                   (selectedSubSubCategoryName && product.subsubcategory === selectedSubSubCategoryName);
+      
+      const matchesSubCategory = product.subcategory === selectedSubCategory || 
+                               (selectedSubCategoryName && product.subcategory === selectedSubCategoryName);
+      
       return (
-        product.category === selectedCategory &&
-        product.subcategory === selectedSubCategory &&
-        product.subsubcategory === selectedSubSubCategory &&
+        matchesCategory &&
+        matchesSubCategory &&
+        matchesSubSubCategory &&
         matchesSearch
       );
     });
@@ -623,9 +686,9 @@ export default function ProductScreen() {
       case 'alphabetical':
         return [...products].sort((a, b) => a.name.localeCompare(b.name));
       case 'priceHighToLow':
-        return [...products].sort((a, b) => b.price - a.price);
+        return [...products].sort((a, b) => parseFloat(b.price) - parseFloat(a.price));
       case 'priceLowToHigh':
-        return [...products].sort((a, b) => a.price - b.price);
+        return [...products].sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
       default:
         return products;
     }
@@ -1039,7 +1102,7 @@ export default function ProductScreen() {
         </ThemedText>
         {canSeePrice() ? (
           <ThemedText style={styles.productPrice}>
-            RM{product.price.toFixed(2)}
+            RM{parseFloat(product.price).toFixed(2)}
           </ThemedText>
         ) : (
           <ThemedText style={styles.contactMessage}>

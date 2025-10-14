@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Promotion, createPromotion, deletePromotion, getAllPromotions, getAllProducts, Product, uploadImage } from '@/services/firebase';
+import { Promotion, createPromotion, deletePromotion, getAllPromotions, getAllProducts, Product, uploadImage } from '@/services/database';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Colors } from '@/constants/Colors';
@@ -24,14 +24,14 @@ export default function AdminPromotionsScreen() {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [newPromotion, setNewPromotion] = useState({
-    name: '',
+    title: '',
     description: '',
     discountType: 'percentage' as 'percentage' | 'fixed',  // Type assertion here
     discountValue: '',
     startDate: new Date(),
     endDate: new Date(),
     minimumPurchase: '',
-    active: true,
+    isActive: true,
     productId: '',
     images: [] as ImagePicker.ImagePickerAsset[],
   });
@@ -253,7 +253,7 @@ export default function AdminPromotionsScreen() {
         throw new Error('User role not found');
       }
       const allPromotions = await getAllPromotions();
-      setPromotions(allPromotions as Promotion[]);
+      setPromotions(allPromotions);
     } catch (error: any) {
       console.error('Error loading promotions:', error);
       Alert.alert('Error', `Failed to load promotions: ${error.message}`);
@@ -288,9 +288,9 @@ export default function AdminPromotionsScreen() {
     try {
       if (!userData) return;
 
-      const uploadPromises = newPromotion.images.map(async (image) => {
+      const uploadPromises = newPromotion.images.map(async (image, index) => {
         try {
-          const imageUrl = await uploadImage(image.uri);
+          const imageUrl = await uploadImage(image.uri, `promotions/${Date.now()}_${index}`);
           if (!imageUrl) throw new Error('Failed to upload image');
           return imageUrl;
         } catch (error) {
@@ -302,24 +302,27 @@ export default function AdminPromotionsScreen() {
       const imageUrls = await Promise.all(uploadPromises);
 
       await createPromotion({
-        ...newPromotion,
-        discountValue: parseFloat(newPromotion.discountValue),
-        minimumPurchase: parseFloat(newPromotion.minimumPurchase),
-        createdBy: userData.uid,
-        images: imageUrls,
+        title: newPromotion.title,
+        description: newPromotion.description,
+        discountPercentage: newPromotion.discountType === 'percentage' ? newPromotion.discountValue : null,
+        discountAmount: newPromotion.discountType === 'fixed' ? newPromotion.discountValue : null,
         startDate: newPromotion.startDate,
         endDate: newPromotion.endDate,
+        isActive: newPromotion.isActive,
+        imageUrl: imageUrls[0] || null,
+        productIds: newPromotion.productId ? [newPromotion.productId] : [],
+        createdBy: userData?.id || null,
       });
 
       setNewPromotion({
-        name: '',
+        title: '',
         description: '',
         discountType: 'percentage',
         discountValue: '',
         startDate: new Date(),
         endDate: new Date(),
         minimumPurchase: '',
-        active: true,
+        isActive: true,
         productId: '',
         images: [],
       });
@@ -438,8 +441,8 @@ export default function AdminPromotionsScreen() {
             <ThemedText style={styles.inputLabel}>Promotion Name</ThemedText>
             <TextInput
               style={styles.input}
-              value={newPromotion.name}
-              onChangeText={(text) => setNewPromotion({ ...newPromotion, name: text })}
+              value={newPromotion.title}
+              onChangeText={(text) => setNewPromotion({ ...newPromotion, title: text })}
             />
 
             <ThemedText style={styles.inputLabel}>Description</ThemedText>
@@ -527,13 +530,13 @@ export default function AdminPromotionsScreen() {
               <Pressable
                 style={[
                   styles.toggle,
-                  newPromotion.active ? styles.toggleActive : styles.toggleInactive
+                  newPromotion.isActive ? styles.toggleActive : styles.toggleInactive
                 ]}
-                onPress={() => setNewPromotion(prev => ({ ...prev, active: !prev.active }))}
+                onPress={() => setNewPromotion(prev => ({ ...prev, isActive: !prev.isActive }))}
               >
                 <ThemedView style={[
                   styles.toggleHandle,
-                  newPromotion.active ? styles.toggleHandleActive : styles.toggleHandleInactive
+                  newPromotion.isActive ? styles.toggleHandleActive : styles.toggleHandleInactive
                 ]} />
               </Pressable>
             </ThemedView>
@@ -545,6 +548,41 @@ export default function AdminPromotionsScreen() {
             <Pressable style={styles.button} onPress={handleCreatePromotion}>
               <ThemedText style={styles.buttonText}>Create Promotion</ThemedText>
             </Pressable>
+
+            {/* Existing Promotions List */}
+            {promotions.length > 0 && (
+              <ThemedView style={{ marginTop: 32 }}>
+                <ThemedText style={[styles.inputLabel, { fontSize: 18, marginBottom: 16 }]}>
+                  Existing Promotions ({promotions.length})
+                </ThemedText>
+                {promotions.map((promotion) => (
+                  <ThemedView key={promotion.id} style={{
+                    borderWidth: 1,
+                    borderColor: colorScheme === 'dark' ? Colors.light.border : Colors.dark.border,
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 12,
+                  }}>
+                    <ThemedText style={{ fontWeight: 'bold', marginBottom: 4 }}>
+                      {promotion.title}
+                    </ThemedText>
+                    <ThemedText style={{ marginBottom: 4 }}>
+                      {promotion.description}
+                    </ThemedText>
+                    <ThemedText style={{ fontSize: 12, opacity: 0.7 }}>
+                      {formatDate(promotion.startDate)} - {formatDate(promotion.endDate)}
+                    </ThemedText>
+                    <ThemedText style={{ 
+                      fontSize: 12, 
+                      color: promotion.isActive ? '#28a745' : '#dc3545',
+                      marginTop: 4
+                    }}>
+                      {promotion.isActive ? 'Active' : 'Inactive'}
+                    </ThemedText>
+                  </ThemedView>
+                ))}
+              </ThemedView>
+            )}
           </ThemedView>
         </ScrollView>
       </SafeAreaView>

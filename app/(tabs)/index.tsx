@@ -7,13 +7,50 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useAuth } from '@/context/AuthContext';
 import { handleSignOut } from '@/utils/auth';
-import { getAllPromotions, getAllProducts, Product } from '@/services/firebase';
+import { getAllPromotions, getAllProducts } from '@/services/database';
 import { Colors } from '@/constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePermissions } from '@/hooks/usePermissions';
 import React from 'react';
 
-// Promotion types
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  categoryId: string | null;
+  category: string | null;
+  subcategory: string | null;
+  subsubcategory: string | null;
+  imageUrl: string | null;
+  images: string[] | null;
+  inStock: boolean;
+  stockQuantity: number | null;
+  stock?: number; // For backward compatibility
+  isActive: boolean;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Database promotion interface
+interface DatabasePromotion {
+  id: string;
+  title: string;
+  description: string | null;
+  discountPercentage: string | null;
+  discountAmount: string | null;
+  startDate: Date;
+  endDate: Date;
+  isActive: boolean;
+  imageUrl: string | null;
+  productIds: string[] | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// UI Promotion interface (backward compatible)
 interface Promotion {
   id: string;
   name: string;
@@ -215,31 +252,44 @@ export default function HomeScreen() {
 
   const loadPromotions = async () => {
     try {
-      const [promos, products] = await Promise.all([
-        getAllPromotions() as Promise<Promotion[]>,
+      const [dbPromos, products] = await Promise.all([
+        getAllPromotions() as Promise<DatabasePromotion[]>,
         getAllProducts() as Promise<Product[]>
       ]);
       
-      if (Array.isArray(promos)) {
+      if (Array.isArray(dbPromos)) {
         const now = new Date();
         
-        const activePromos = promos.filter((promo) => {
-          // Handle raw Firestore Timestamp object
-          const parseTimestamp = (timestamp: any) => {
-            if (timestamp?.seconds) {
-              return new Date(timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000);
-            }
-            return new Date(timestamp);
-          };
-
-          const startDate = parseTimestamp(promo.startDate);
-          const endDate = parseTimestamp(promo.endDate);
+        // Transform database promotions to UI format
+        const transformedPromos: Promotion[] = dbPromos.map((dbPromo) => ({
+          id: dbPromo.id,
+          name: dbPromo.title,
+          description: dbPromo.description || '',
+          discountType: dbPromo.discountPercentage ? 'percentage' : 'fixed',
+          discountValue: parseFloat(dbPromo.discountPercentage || dbPromo.discountAmount || '0'),
+          startDate: dbPromo.startDate,
+          endDate: dbPromo.endDate,
+          minimumPurchase: 0, // Default value
+          active: dbPromo.isActive,
+          productId: dbPromo.productIds?.[0] || '',
+          createdBy: dbPromo.createdBy || '',
+          images: dbPromo.imageUrl ? [dbPromo.imageUrl] : [],
+          createdAt: dbPromo.createdAt,
+          updatedAt: dbPromo.updatedAt,
+        }));
+        
+        const activePromos = transformedPromos.filter((promo) => {
+          const startDate = new Date(promo.startDate);
+          const endDate = new Date(promo.endDate);
+          
+          // Show promotions that are active OR starting within 24 hours
+          const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
           
           return (
             promo.active && 
             !isNaN(startDate.getTime()) && 
             !isNaN(endDate.getTime()) && 
-            startDate.getTime() <= now.getTime() && 
+            startDate.getTime() <= twentyFourHoursFromNow.getTime() && 
             endDate.getTime() >= now.getTime()
           );
         });
@@ -247,7 +297,13 @@ export default function HomeScreen() {
         setPromotions(activePromos);
       }
 
-      const lowStock = products.filter(product => product.stock < 10);
+      // Map stockQuantity to stock for compatibility and filter low stock
+      const productsWithStock = products.map(product => ({
+        ...product,
+        stock: product.stockQuantity || 0
+      }));
+      
+      const lowStock = productsWithStock.filter(product => (product.stock || 0) < 10);
       setLowStockProducts(lowStock);
     } catch (error) {
       console.error('Error loading promotions:', error);
@@ -324,7 +380,7 @@ export default function HomeScreen() {
           }
         >
           <ThemedView style={styles.welcomeContainer}>
-            <ThemedText type="title">Hello, {userData?.name || 'Guest'}!</ThemedText>
+            <ThemedText type="title">Hello, {userData?.firstName || userData?.email?.split('@')[0] || 'Guest'}!</ThemedText>
           </ThemedView>
 
           <ThemedView style={styles.carouselContainer}>
