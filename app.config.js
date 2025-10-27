@@ -26,7 +26,7 @@ export default {
     },
     android: {
       package: "com.juta.cnb",
-      versionCode: 7,
+      versionCode: 8,
       adaptiveIcon: {
         foregroundImage: "./assets/images/newtex-square.png",
         backgroundColor: "#FFFFFF"
