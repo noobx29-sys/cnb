@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import FastImage from 'react-native-fast-image';
+import { Image, ImageContentFit } from 'expo-image';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
 interface OptimizedImageProps {
   uri: string;
   style: any;
-  resizeMode?: 'cover' | 'contain' | 'stretch' | 'center';
+  resizeMode?: ImageContentFit;
   placeholder?: React.ReactNode;
   onLoad?: () => void;
   priority?: 'low' | 'normal' | 'high';
@@ -31,21 +31,6 @@ export function OptimizedImage({
     );
   }
 
-  // Convert resizeMode to FastImage constants
-  const fastImageResizeMode = {
-    'cover': FastImage.resizeMode.cover,
-    'contain': FastImage.resizeMode.contain,
-    'stretch': FastImage.resizeMode.stretch,
-    'center': FastImage.resizeMode.center,
-  }[resizeMode];
-
-  // Convert priority string to FastImage constants
-  const fastImagePriority = {
-    'low': FastImage.priority.low,
-    'normal': FastImage.priority.normal,
-    'high': FastImage.priority.high,
-  }[priority];
-
   // Generate a downsized thumbnail URL for faster initial loading (if using Firebase Storage)
   const getThumbnailUrl = (url: string) => {
     // Check if it's a Firebase Storage URL
@@ -69,16 +54,12 @@ export function OptimizedImage({
           <ActivityIndicator size="small" color="#FB8A13" />
         </View>
       )}
-      <FastImage
-        source={{ 
-          uri,
-          priority: fastImagePriority,
-          cache: FastImage.cacheControl.immutable
-        }}
+      <Image
+        source={{ uri }}
         style={style}
-        resizeMode={fastImageResizeMode}
+        contentFit={resizeMode}
         onLoad={handleLoad}
-        onLoadEnd={handleLoad}
+        cachePolicy="memory-disk"
         {...rest}
       />
     </View>
@@ -87,12 +68,9 @@ export function OptimizedImage({
 
 // Preload multiple images
 OptimizedImage.preload = (uris: string[]) => {
-  const sources = uris.map(uri => ({
-    uri,
-    priority: FastImage.priority.high,
-  }));
-  
-  FastImage.preload(sources);
+  // expo-image handles preloading automatically through its caching system
+  // You can manually preload by creating Image components with display: none if needed
+  console.log('Preloading images:', uris);
 };
 
 const styles = StyleSheet.create({

@@ -190,7 +190,7 @@ export default function Contact() {
         >
           <ThemedView style={styles.content}>
             <ThemedView style={styles.titleContainer}>
-              <ThemedText type="title">Newtex Carpets Sdn Bhd</ThemedText>
+              <ThemedText type="title">CNB Carpets Sdn Bhd</ThemedText>
             </ThemedView>
             
             <TouchableOpacity onPress={() => handlePhoneCall('1300222622')}>

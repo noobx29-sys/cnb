@@ -32,12 +32,13 @@
     "@react-navigation/native": "^7.0.0",
     "@shopify/flash-list": "1.7.6",
     "cors": "^2.8.5",
-    "expo": "53.0.22",
+    "expo": "~53.0.23",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.7",
     "expo-file-system": "~18.1.11",
     "expo-font": "~13.3.2",
     "expo-haptics": "~14.1.4",
+    "expo-image": "~2.4.1",
     "expo-image-manipulator": "~13.1.7",
     "expo-image-picker": "~16.1.4",
     "expo-linking": "~7.1.7",
@@ -58,9 +59,8 @@
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "^7.54.2",
-    "react-native": "0.79.5",
+    "react-native": "0.79.6",
     "react-native-dotenv": "^3.4.11",
-    "react-native-fast-image": "^8.6.3",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-html-to-pdf": "^0.12.0",
     "react-native-image-progress": "^1.2.0",
@@ -78,15 +78,14 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@react-native-community/cli": "^18.0.0",
-    "@types/expo__vector-icons": "^10.0.2",
     "@types/jest": "^29.5.12",
     "@types/react": "~19.0.10",
     "@types/react-native": "^0.72.8",
     "@types/react-test-renderer": "^18.3.0",
     "jest": "^29.2.1",
     "jest-expo": "~53.0.10",
-    "react-test-renderer": "18.3.1",
-    "typescript": "^5.3.3"
+    "react-test-renderer": "19.0.0",
+    "typescript": "~5.8.3"
   },
   "private": true
 }

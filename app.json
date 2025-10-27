@@ -35,10 +35,18 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ],
-      "icon": "./assets/images/newtex-square.png"
+      "icon": "./assets/images/newtex-square.png",
+      "navigationBar": {
+        "visible": "leanback"
+      },
+      "statusBar": {
+        "backgroundColor": "transparent",
+        "translucent": true
+      }
     },
     "plugins": [
       "expo-router",
+      "expo-system-ui",
       [
         "expo-splash-screen",
         {

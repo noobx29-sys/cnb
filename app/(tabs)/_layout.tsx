@@ -51,9 +51,10 @@ export default function TabLayout() {
                 height: 88,
               },
               android: {
-                height: 60,
+                height: 60 + insets.bottom,
                 elevation: 8,
                 backgroundColor: Colors[colorScheme].background,
+                paddingBottom: insets.bottom,
               },
             }),
             borderTopWidth: StyleSheet.hairlineWidth,
@@ -65,7 +66,8 @@ export default function TabLayout() {
               paddingBottom: 20,
             },
             android: {
-              height: '100%',
+              height: 60,
+              paddingBottom: Math.max(4, insets.bottom * 0.3),
             },
           }),
           tabBarLabelStyle: {
